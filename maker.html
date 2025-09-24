@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creador de Configuración de Evaluaciones</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7f9; padding: 40px; }
+        .maker-container { max-width: 1200px; margin: 0 auto; background: white; box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); border-radius: 12px; padding: 30px; }
+        .maker-header { text-align: center; margin-bottom: 30px; border-bottom: 1px solid #e9ecef; padding-bottom: 20px; }
+        .subsection-item { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px; background: #fafafa; }
+        .subsection-controls { align-self: flex-end; }
+        .weight-input { width: 100px; }
+        .accordion-button:not(.collapsed) { color: #fff; background-color: #0d6efd; }
+        .accordion-button:not(.collapsed)::after { filter: brightness(0) invert(1); }
+        .section-header-controls { display: flex; align-items: center; gap: 15px; }
+    </style>
+</head>
+<body>
+    <div class="maker-container">
+        <div class="maker-header">
+            <h2>🛠️ Creador de Configuraciones</h2>
+            <p class="text-muted">Define la estructura de tu evaluación y guarda la configuración en un archivo <strong>config.json</strong>.</p>
+        </div>
+
+        <div class="card my-4">
+            <div class="card-header"><h5 class="mb-0">Asignar Pesos de Sección (%)</h5></div>
+            <div class="card-body">
+                <div class="row" id="weights-container"></div>
+                <div class="alert alert-info mt-3" id="weight-sum-alert">Suma total del peso: <span id="weight-sum">0</span>%. Debe ser 100%.</div>
+            </div>
+        </div>
+
+        <div class="accordion" id="sections-accordion"></div>
+
+        <div class="d-grid mt-4">
+            <button class="btn btn-primary btn-lg" id="btn-save-config">
+                <i class="fas fa-save me-2"></i>Guardar Configuración (config.json)
+            </button>
+        </div>
+    </div>
+    
+    <div id="templates" style="display: none;">
+        <div id="template-info"><h2 class="mb-4">Self-Assessment Checklist for Emergency Medical Teams</h2><div class="card section-card"><div class="card-body"><h5 class="card-title">Minimum Standards for Highly Infectious Disease (HID) Specialized Care Team (SCT) – AWD Inpatient</h5><p class="card-text">This self-assessment tool is designed to help HID SCTs evaluate their readiness and capabilities according to the established minimum standards. Use this digital tool to complete your assessment, track progress, and generate reports for your organization and the coordination mechanism.</p><p class="text-muted">Version 1.0/2025</p></div></div><div class="row mt-4"><div class="col-md-4"><div class="overview-card bg-light"><i class="fas fa-check-circle fa-2x text-success"></i><h5>Completed Sections</h5><div class="card-value" id="completedSections">0/8</div></div></div><div class="col-md-4"><div class="overview-card bg-light"><i class="fas fa-chart-line fa-2x text-primary"></i><h5>Overall Score</h5><div class="card-value" id="overallScore">0%</div></div></div><div class="col-md-4"><div class="overview-card bg-light"><i class="fas fa-clock fa-2x text-warning"></i><h5>Last Updated</h5><div class="card-value" id="lastUpdated">Today</div></div></div></div></div>
+        <div id="template-definition"><h2 class="mb-4">Technical Standards Definition</h2><div class="card section-card"><div class="card-body"><p>HID SCTs are national or international teams deployed at the request of the Ministry of Health (MOH)/ coordination cell of the host country. The HID SCT's modality of deployment (embed, coupled or self-sustained) depends on context and defined capacity/level of care.</p><p>Depending on modality of deployment, some operations support, logistics and WASH elements may be provided by a host facility.</p></div></div></div>
+        <div id="template-org-detail"><h2 class="mb-4">Organizational Details</h2><div class="card section-card"><div class="section-header"><h5>Team Information</h5></div><div class="card-body"><div class="row mb-3"><div class="col-md-6"><label for="teamName" class="form-label">Team Name</label><input type="text" class="form-control" id="teamName"></div><div class="col-md-6"><label for="region" class="form-label">Region</label><input type="text" class="form-control" id="region"></div></div><div class="row mb-3"><div class="col-md-6"><label for="country" class="form-label">Country</label><input type="text" class="form-control" id="country"></div><div class="col-md-6"><label for="mentorName" class="form-label">Mentor Name</label><input type="text" class="form-control" id="mentorName"></div></div></div></div><div class="card section-card"><div class="section-header"><h5>Contact Information</h5></div><div class="card-body"><div class="row mb-3"><div class="col-md-6"><h6>Headquarters Contact</h6><div class="mb-2"><label class="form-label">Name</label><input type="text" class="form-control" id="hqName"></div><div class="mb-2"><label class="form-label">Email</label><input type="email" class="form-control" id="hqEmail"></div><div class="mb-2"><label class="form-label">Phone</label><input type="tel" class="form-control" id="hqPhone"></div><div class="mb-2"><label class="form-label">Position</label><input type="text" class="form-control" id="hqPosition"></div></div><div class="col-md-6"><h6>Operations Contact</h6><div class="mb-2"><label class="form-label">Name</label><input type="text" class="form-control" id="opsName"></div><div class="mb-2"><label class="form-label">Email</label><input type="email" class="form-control" id="opsEmail"></div><div class="mb-2"><label class="form-label">Phone</label><input type="tel" class="form-control" id="opsPhone"></div><div class="mb-2"><label class="form-label">Position</label><input type="text" class="form-control" id="opsPosition"></div></div></div></div></div><div class="card section-card"><div class="section-header"><h5>Progress Overview</h5></div><div class="card-body"><table class="table table-bordered"><thead class="table-light"><tr><th>Section</th><th>Weight</th><th>Status</th><th>% Completed</th></tr></thead><tbody id="progressTableBody"></tbody></table></div></div></div>
+        <div id="template-summary"><h2 class="mb-4">Summary & Action Plan</h2><div class="card section-card"><div class="section-header"><h5>Overall Readiness Assessment</h5></div><div class="card-body"><div class="mb-3"><label for="strengths" class="form-label"><strong>Strengths Identified:</strong></label><textarea class="form-control summary-textarea" id="strengths" placeholder="List the top 3-5 strengths identified..."></textarea></div><div class="mb-3"><label for="criticalGaps" class="form-label"><strong>Critical Gaps Requiring Immediate Action:</strong></label><textarea class="form-control summary-textarea" id="criticalGaps" placeholder="List the critical gaps that need..."></textarea></div><div class="mb-3"><label class="form-label"><strong>Timeline for Addressing Gaps:</strong></label><div class="mb-2"><label class="form-label">Immediate (0-1 month):</label><textarea class="form-control summary-textarea" id="immediateActions"></textarea></div><div class="mb-2"><label class="form-label">Short-term (1-3 months):</label><textarea class="form-control summary-textarea" id="shortTermActions"></textarea></div><div class="mb-2"><label class="form-label">Medium-term (3-6 months):</label><textarea class="form-control summary-textarea" id="mediumTermActions"></textarea></div></div><div class="mb-3"><label class="form-label"><strong>Support Required:</strong></label><div class="mb-2"><label class="form-label">Technical assistance needed:</label><textarea class="form-control summary-textarea" id="technicalAssistance"></textarea></div><div class="mb-2"><label class="form-label">Training requirements:</label><textarea class="form-control summary-textarea" id="trainingRequirements"></textarea></div><div class="mb-2"><label class="form-label">Resource requirements:</label><textarea class="form-control summary-textarea" id="resourceRequirements"></textarea></div></div><div class="mb-3"><label for="nextSteps" class="form-label"><strong>Next Steps:</strong></label><textarea class="form-control summary-textarea" id="nextSteps" placeholder="1. First priority action..."></textarea></div><div class="row"><div class="col-md-6"><label for="completionDate" class="form-label">Date of Completion:</label><input type="date" class="form-control" id="completionDate"></div><div class="col-md-6"><label for="reviewedBy" class="form-label">Reviewed by:</label><input type="text" class="form-control" id="reviewedBy" placeholder="Name and title"></div></div><div class="mt-3"><label for="mentorAssignment" class="form-label">Mentor Assignment:</label><input type="text" class="form-control" id="mentorAssignment" placeholder="Mentor name and contact"></div></div></div></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    const TOOL_CONFIG = {
+        'info': { title: 'INFO', icon: 'fa-info-circle', hasSubsections: false, weight: 0, enabled: true },
+        'definition': { title: 'DEFINITION', icon: 'fa-book', hasSubsections: false, weight: 0, enabled: true },
+        'org-detail': { title: 'ORGANIZATIONAL DETAIL', icon: 'fa-building', hasSubsections: false, weight: 0, enabled: true },
+        'guiding-principles': { title: 'GUIDING PRINCIPLES', icon: 'fa-star', hasSubsections: true, weight: 2, enabled: true, subsections: ['<strong>Safe Care</strong> - Written statement on behalf the organization', '<strong>Equitable Care</strong> - Written statement on behalf the organization', '<strong>Ethical Care</strong> - Written statement on behalf the organization', '<strong>Accountable Response</strong> - Written statement on behalf the organization', '<strong>Appropriate Response</strong> - Written statement on behalf the organization', '<strong>Coordinated Response</strong> - Written statement on behalf the organization'] },
+        'core-standards': { title: 'CORE STANDARDS', icon: 'fa-cogs', hasSubsections: true, weight: 18, enabled: true, subsections: ['<strong>Administration & Organizational Management</strong>', '<strong>Human Resources</strong>', '<strong>Professional Licensing & Conduct</strong>', '<strong>Training of Teams</strong>', '<strong>Coordination of EMTs</strong>', '<strong>Records and Reporting</strong>'] },
+        'clinical-standards': { 
+            title: 'CLINICAL STANDARDS', icon: 'fa-stethoscope', hasSubsections: true, weight: 20, enabled: true, 
+            subsections: ['<strong>Length of stay</strong> - Minimum length of stay', '<strong>Team size and configuration</strong> - SCTs should be adequately sized and appropriately configured for their tasking...']
+        },
+        'logistic-standards': { title: 'LOGISTIC STANDARDS', icon: 'fa-truck', hasSubsections: true, weight: 10, enabled: true, subsections: ['<strong>Power and Fuel</strong> - SCTs/EMTs must ensure sufficient power supply', '<strong>Communications</strong> - SCTs/EMTs must have communication capabilities', '<strong>Transportation & Fleet</strong>', '<strong>Warehouse Management</strong>'] },
+        'wash-standards': { title: 'WASH STANDARDS', icon: 'fa-hand-holding-water', hasSubsections: true, weight: 10, enabled: true, subsections: ['<strong>Water Supply</strong> - SCTs/EMTs must ensure sufficient safe drinking water', '<strong>Hygiene</strong> - SCTs/EMTs must ensure safe hygiene measures', '<strong>Environmental Cleaning</strong>', '<strong>Healthcare Waste Management</strong>'] },
+        'summary': { title: 'SUMMARY', icon: 'fa-file-alt', hasSubsections: false, weight: 0, enabled: true }
+    };
+
+    function renderMakerUI() {
+        const sectionsContainer = document.getElementById('sections-accordion');
+        const weightsContainer = document.getElementById('weights-container');
+        sectionsContainer.innerHTML = ''; weightsContainer.innerHTML = '';
+
+        Object.entries(TOOL_CONFIG).forEach(([key, config]) => {
+            let contentEditor = '';
+            if (config.hasSubsections) {
+                contentEditor = `<h5>Estándares / Subsecciones</h5><div id="subsections-${key}">${
+                    config.subsections.map((sub, index) => `
+                        <div class="subsection-item">
+                            <textarea id="editor-${key}-${index}">${sub}</textarea>
+                            <div class="subsection-controls"><button class="btn btn-danger btn-sm remove-item"><i class="fas fa-trash"></i></button></div>
+                        </div>`).join('')
+                }</div><button class="btn btn-outline-success mt-2 add-item" data-section="${key}"><i class="fas fa-plus me-2"></i>Añadir Estándar</button>`;
+            } else {
+                contentEditor = `<div class="mb-3"><label class="form-label">Contenido Principal de la Sección</label><textarea id="editor-${key}">${document.getElementById(`template-${key}`).innerHTML}</textarea></div>`;
+            }
+            const sectionHTML = `<div class="accordion-item" id="accordion-item-${key}"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${key}"><div class="section-header-controls w-100"><span class="me-auto">Configurar: ${config.title}</span><div class="form-check form-switch"><input class="form-check-input section-enable-switch" type="checkbox" data-key="${key}" ${config.enabled ? 'checked' : ''}><label class="form-check-label">Habilitar</label></div></div></button></h2><div id="collapse-${key}" class="accordion-collapse collapse" data-bs-parent="#sections-accordion"><div class="accordion-body"><div class="mb-3"><label class="form-label">Título de la Sección</label><input type="text" class="form-control section-title-input" data-key="${key}" value="${config.title}"></div>${contentEditor}</div></div></div>`;
+            sectionsContainer.insertAdjacentHTML('beforeend', sectionHTML);
+
+            if (config.weight > 0) {
+                const weightHTML = `<div class="col-md-4 mb-3" id="weight-div-${key}"><label class="form-label">${config.title}</label><input type="number" class="form-control weight-input" data-key="${key}" value="${config.weight}" min="0" ${!config.enabled ? 'disabled' : ''}></div>`;
+                weightsContainer.insertAdjacentHTML('beforeend', weightHTML);
+            }
+        });
+        
+        initEditors();
+        updateWeightSum();
+        addEventListeners();
+    }
+    
+    function initEditors(selector = 'textarea') { tinymce.init({ selector: selector, plugins: 'lists link table code help wordcount', toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | help', height: 250, menubar: false }); }
+    function addEventListeners() {
+        document.querySelectorAll('.add-item').forEach(btn => btn.onclick = e => {
+            const section = e.currentTarget.dataset.section, container = document.getElementById(`subsections-${section}`), newIndex = Date.now(), newItem = document.createElement('div');
+            newItem.className = 'subsection-item';
+            newItem.innerHTML = `<textarea id="editor-${section}-${newIndex}"></textarea><div class="subsection-controls"><button class="btn btn-danger btn-sm remove-item"><i class="fas fa-trash"></i></button></div>`;
+            container.appendChild(newItem);
+            newItem.querySelector('.remove-item').onclick = () => { tinymce.get(`editor-${section}-${newIndex}`).remove(); newItem.remove(); };
+            initEditors(`#editor-${section}-${newIndex}`);
+        });
+        document.querySelectorAll('.remove-item').forEach(btn => btn.onclick = e => { const item = e.currentTarget.closest('.subsection-item'), editorId = item.querySelector('textarea').id; tinymce.get(editorId).remove(); item.remove(); });
+        document.querySelectorAll('.weight-input').forEach(input => input.oninput = updateWeightSum);
+        document.querySelectorAll('.section-enable-switch').forEach(toggle => toggle.onchange = e => {
+            const key = e.currentTarget.dataset.key, weightInput = document.querySelector(`.weight-input[data-key="${key}"]`);
+            if (weightInput) weightInput.disabled = !e.currentTarget.checked;
+            document.getElementById(`accordion-item-${key}`).style.opacity = e.currentTarget.checked ? '1' : '0.5';
+            updateWeightSum();
+        });
+        document.getElementById('btn-save-config').onclick = saveConfigFile;
+    }
+    function updateWeightSum() {
+        const sum = Array.from(document.querySelectorAll('.weight-input:not(:disabled)')).reduce((acc, input) => acc + (parseInt(input.value) || 0), 0);
+        const alertDiv = document.getElementById('weight-sum-alert');
+        document.getElementById('weight-sum').textContent = sum;
+        alertDiv.classList.toggle('alert-danger', sum !== 100);
+        alertDiv.classList.toggle('alert-info', sum === 100);
+    }
+    function saveConfigFile() {
+        const finalConfig = {};
+        document.querySelectorAll('.section-title-input').forEach(input => {
+            const key = input.dataset.key;
+            const enabled = document.querySelector(`.section-enable-switch[data-key="${key}"]`).checked;
+            if (!enabled) return;
+            finalConfig[key] = { ...TOOL_CONFIG[key], title: input.value, enabled: true, weight: parseInt(document.querySelector(`.weight-input[data-key="${key}"]`)?.value || 0) };
+            if (finalConfig[key].hasSubsections) {
+                finalConfig[key].subsections = Array.from(document.querySelectorAll(`#subsections-${key} .subsection-item textarea`)).map(area => tinymce.get(area.id) ? tinymce.get(area.id).getContent() : area.value);
+            } else {
+                finalConfig[key].content = tinymce.get(`editor-${key}`).getContent();
+            }
+        });
+        const blob = new Blob([JSON.stringify(finalConfig, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'config.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    document.addEventListener('DOMContentLoaded', renderMakerUI);
+    </script>
+</body>
+</html>
