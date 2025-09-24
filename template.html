@@ -70,7 +70,7 @@
             <div class="row g-0">
                 <div class="col-lg-2"><div class="sidebar"><h4 class="text-center mb-4">HID SCT Assessment</h4><ul class="nav flex-column" id="sidebar-nav-container"></ul><div class="mt-4 p-3"><div class="progress-bar-container"><div class="progress-bar bg-success" id="overallProgressBar" style="width:0%"></div></div><p class="mb-1">Overall Completion</p><h5 class="text-center" id="overallProgressText">0%</h5></div></div></div>
                 <div class="col-lg-8"><div class="main-content"><div class="tab-content" id="tab-content-container"></div><div class="d-flex justify-content-between mt-4"><div><button class="btn btn-outline-secondary" id="btn-import-excel"><i class="fas fa-upload me-2"></i>Importar Datos Excel</button><button class="btn btn-outline-secondary" id="btn-export-json"><i class="fas fa-download me-2"></i>Exportar Datos JSON</button></div><div><button class="btn btn-outline-primary me-2" id="btn-save"><i class="fas fa-save me-2"></i>Guardar Borrador</button><button class="btn btn-outline-info me-2" id="btn-export-excel"><i class="fas fa-file-excel me-2"></i>Exportar a Excel</button><button class="btn btn-success" id="btn-submit"><i class="fas fa-check-circle me-2"></i>Enviar Evaluación</button></div></div></div></div>
-                <div class="col-lg-2"><div class="progress-sidebar"><h5 class="mb-3">Progress Overview</h5><div class="progress-bar-container mb-3"><div class="progress-bar bg-success" id="sidebarProgressBar" style="width:0%"></div></div><p class="mb-1">Overall Completion</p<h5 class="text-center mb-4" id="sidebarProgressText">0%</h5><table class="table table-bordered"><thead class="table-light"><tr><th>Section</th><th>Weight</th><th>Status</th><th>%</th></tr></thead><tbody id="progressSidebarBody"></tbody></table></div></div>
+                <div class="col-lg-2"><div class="progress-sidebar"><h5 class="mb-3">Progress Overview</h5><div class="progress-bar-container mb-3"><div class="progress-bar bg-success" id="sidebarProgressBar" style="width:0%"></div></div><p class="mb-1">Overall Completion</p><h5 class="text-center mb-4" id="sidebarProgressText">0%</h5><table class="table table-bordered"><thead class="table-light"><tr><th>Section</th><th>Weight</th><th>Status</th><th>%</th></tr></thead><tbody id="progressSidebarBody"></tbody></table></div></div>
             </div>
         </div>
         <input type="file" id="data-file-input" class="file-input" accept=".xlsx, .xls">
@@ -121,22 +121,404 @@
         addAppEventListeners();
     }
     
-    function loadSavedData(){if(assessmentData.teamInfo&&Object.keys(assessmentData.teamInfo).forEach(t=>{const e=document.getElementById(t);e&&(e.value=assessmentData.teamInfo[t])}),document.querySelectorAll(".score-select").forEach(t=>{const e=t.dataset.section+"-"+t.dataset.item;if(assessmentData.scores[e]){t.value=assessmentData.scores[e],updateScoreBadge(t);const n=t.closest("tr");n&&(n.querySelector(".evidence-input").value=assessmentData.evidence[e]||"",n.querySelector(".gaps-input").value=assessmentData.gaps[e]||"",n.querySelector(".action-input").value=assessmentData.actions[e]||"")}}),assessmentData.comments&&Object.keys(assessmentData.comments).forEach(t=>{const e=document.getElementById(t);e&&(e.value=assessmentData.comments[t])}),assessmentData.summary){const t=assessmentData.summary;Object.keys(t).forEach(e=>{const n=document.getElementById(e);n&&(n.value=t[e])})}}
-    function saveProgress(){assessmentData.teamInfo={teamName:document.getElementById("teamName")?.value,region:document.getElementById("region")?.value,country:document.getElementById("country")?.value,mentorName:document.getElementById("mentorName")?.value,hqName:document.getElementById("hqName")?.value,hqEmail:document.getElementById("hqEmail")?.value,hqPhone:document.getElementById("hqPhone")?.value,hqPosition:document.getElementById("hqPosition")?.value,opsName:document.getElementById("opsName")?.value,opsEmail:document.getElementById("opsEmail")?.value,opsPhone:document.getElementById("opsPhone")?.value,opsPosition:document.getElementById("opsPosition")?.value},assessmentData.scores={},assessmentData.evidence={},assessmentData.gaps={},assessmentData.actions={},document.querySelectorAll(".score-select").forEach(t=>{const e=t.dataset.section+"-"+t.dataset.item,n=t.closest("tr");t.value&&(assessmentData.scores[e]=t.value);const o=n.querySelector(".evidence-input"),i=n.querySelector(".gaps-input"),s=n.querySelector(".action-input");o&&(assessmentData.evidence[e]=o.value),i&&(assessmentData.gaps[e]=i.value),s&&(assessmentData.actions[e]=s.value)}),assessmentData.comments={},SECTIONS_WITH_WEIGHT.forEach(t=>{const e=document.getElementById(t.section+"Comments");e&&(assessmentData.comments[t.section+"Comments"]=e.value)}),assessmentData.summary={strengths:document.getElementById("strengths")?.value,criticalGaps:document.getElementById("criticalGaps")?.value,immediateActions:document.getElementById("immediateActions")?.value,shortTermActions:document.getElementById("shortTermActions")?.value,mediumTermActions:document.getElementById("mediumTermActions")?.value,technicalAssistance:document.getElementById("technicalAssistance")?.value,trainingRequirements:document.getElementById("trainingRequirements")?.value,resourceRequirements:document.getElementById("resourceRequirements")?.value,nextSteps:document.getElementById("nextSteps")?.value,completionDate:document.getElementById("completionDate")?.value,reviewedBy:document.getElementById("reviewedBy")?.value,mentorAssignment:document.getElementById("mentorAssignment")?.value},localStorage.setItem("hidSCTAssessment",JSON.stringify(assessmentData)),showNotification("Progress saved successfully!"),updateProgress()}
-    function showNotification(t){const e=document.createElement("div");e.className="notification",e.textContent=t,document.body.appendChild(e),setTimeout(()=>{e.style.animation="fadeOut .3s ease",setTimeout(()=>e.remove(),300)},3e3)}
-    function updateScoreBadge(t){const e=t.value;t.className="form-select score-select",""!==e&&"NA"!==e&&t.classList.add("score-"+e)}
-    function updateProgress(){let t=0,e=0,n=0;const o={};SECTIONS_WITH_WEIGHT.forEach(t=>{o[t.section]={score:0,maxScore:0}});let i=0,s=0;document.querySelectorAll(".score-select").forEach(t=>{const e=t.dataset.section;o[e]&&(i++,""!==t.value&&(s++,"NA"!==t.value&&(o[e].score+=parseInt(t.value),o[e].maxScore+=3)))});let a=0;SECTIONS_WITH_WEIGHT.forEach(n=>{const i=o[n.section];let s=0;i.maxScore>0&&(s=Math.round(i.score/i.maxScore*100));const a=document.getElementById(n.section+"Score");a&&(a.textContent=s+"% Complete"),t+=n.weight,e+=n.weight*s/100}),a=t>0?Math.round(e/t*100):0,n=Object.values(o).filter(t=>t.maxScore>0).length;const c=document.getElementById("completedSections");c&&(c.textContent=n+"/"+SECTIONS_WITH_WEIGHT.length);const d=document.getElementById("overallScore");d&&(d.textContent=a+"%");const r=document.getElementById("lastUpdated");r&&(r.textContent=(new Date).toLocaleDateString()),document.getElementById("overallProgressBar").style.width=a+"%",document.getElementById("overallProgressText").textContent=a+"%",document.getElementById("sidebarProgressBar").style.width=a+"%",document.getElementById("sidebarProgressText").textContent=a+"%";const l=document.getElementById("progressTableBody"),m=document.getElementById("progressSidebarBody");if(!l || !m){return}; l.innerHTML="",m.innerHTML="";let g=0,p=0;SECTIONS_WITH_WEIGHT.forEach(t=>{const e=o[t.section];let n=0;e.maxScore>0&&(n=Math.round(e.score/e.maxScore*100));const i=0===n?"Not Started":n<100?"In Progress":"Completed",s="Completed"===i?"bg-success":"In Progress"===i?"bg-warning":"bg-secondary";g+=t.weight,p+=t.weight*n/100,l.innerHTML+=\`<tr><td>\${t.name}</td><td>\${t.weight}%</td><td><span class="badge \${s}">\${i}</span></td><td>\${n}%</td></tr>\`,m.innerHTML+=\`<tr><td>\${t.name.split(" ")[0]}</td><td><span class="badge \${s}">\${i}</span></td><td>\${n}%</td></tr>\`});const u=g>0?Math.round(p/g*100):0;l.innerHTML+=\`<tr class="table-primary fw-bold"><td>TOTAL</td><td>\${g}%</td><td></td><td>\${u}%</td></tr>\`}
-    function exportToExcel(){saveProgress();const t=XLSX.utils.book_new(),e=[["Team Information",""],["Team Name",assessmentData.teamInfo.teamName||""],["Region",assessmentData.teamInfo.region||""],["Country",assessmentData.teamInfo.country||""],["Mentor Name",assessmentData.teamInfo.mentorName||""],[""],["Headquarters Contact",""],["Name",assessmentData.teamInfo.hqName||""],["Email",assessmentData.teamInfo.hqEmail||""],["Phone",assessmentData.teamInfo.hqPhone||""],["Position",assessmentData.teamInfo.hqPosition||""],[""],["Operations Contact",""],["Name",assessmentData.teamInfo.opsName||""],["Email",assessmentData.teamInfo.opsEmail||""],["Phone",assessmentData.teamInfo.opsPhone||""],["Position",assessmentData.teamInfo.opsPosition||""]],n=XLSX.utils.aoa_to_sheet(e);XLSX.utils.book_append_sheet(t,n,"Team Info");const o=[["Standard ID","Pillar","Standard Statement","Score","Evidence","Gaps","Actions","Comments"]];document.querySelectorAll(".score-select").forEach(t=>{const e=t.closest("tr"),n=e.cells[0].innerHTML,i=t.dataset.section,s=t.dataset.section+"-"+t.dataset.item;o.push([s,i,n,t.value||"",e.querySelector(".evidence-input")?.value||"",e.querySelector(".gaps-input")?.value||"",e.querySelector(".action-input")?.value||"",assessmentData.comments[i+"Comments"]||""])});const i=XLSX.utils.aoa_to_sheet(o);XLSX.utils.book_append_sheet(t,i,"HID SCT Assessment"),XLSX.writeFile(t,"HID_SCT_Assessment_"+(new Date).toISOString().split("T")[0]+".xlsx"),showNotification("Data exported to Excel successfully!")}
-    function importFromExcel(t){const e=t.target.files[0];if(!e)return;const n=new FileReader;n.onload=function(t){try{XLSX.read(t.target.result,{type:"binary"});assessmentData={teamInfo:{},scores:{},evidence:{},gaps:{},actions:{},comments:{},summary:{}};const e=t.Sheets["HID SCT Assessment"],n=XLSX.utils.sheet_to_json(e);for(const t of n)assessmentData.scores[t["Standard ID"]]=t.Score,assessmentData.evidence[t["Standard ID"]]=t.Evidence,assessmentData.gaps[t["Standard ID"]]=t.Gaps,assessmentData.actions[t["Standard ID"]]=t.Actions;localStorage.setItem("hidSCTAssessment",JSON.stringify(assessmentData)),loadSavedData(),updateProgress(),showNotification("Data imported successfully!")}catch(t){showNotification("Error importing file.")}},n.readAsBinaryString(e)}
+    function loadSavedData(){
+        if(assessmentData.teamInfo){
+            Object.keys(assessmentData.teamInfo).forEach(key => {
+                const element = document.getElementById(key);
+                if(element) {
+                    element.value = assessmentData.teamInfo[key];
+                }
+            });
+        }
+        
+        document.querySelectorAll(".score-select").forEach(select => {
+            const key = select.dataset.section + "-" + select.dataset.item;
+            if(assessmentData.scores[key]) {
+                select.value = assessmentData.scores[key];
+                updateScoreBadge(select);
+                const row = select.closest("tr");
+                if(row) {
+                    row.querySelector(".evidence-input").value = assessmentData.evidence[key] || "";
+                    row.querySelector(".gaps-input").value = assessmentData.gaps[key] || "";
+                    row.querySelector(".action-input").value = assessmentData.actions[key] || "";
+                }
+            }
+        });
+        
+        if(assessmentData.comments) {
+            Object.keys(assessmentData.comments).forEach(key => {
+                const element = document.getElementById(key);
+                if(element) {
+                    element.value = assessmentData.comments[key];
+                }
+            });
+        }
+        
+        if(assessmentData.summary) {
+            const summary = assessmentData.summary;
+            Object.keys(summary).forEach(key => {
+                const element = document.getElementById(key);
+                if(element) {
+                    element.value = summary[key];
+                }
+            });
+        }
+    }
+    
+    function saveProgress(){
+        assessmentData.teamInfo = {
+            teamName: document.getElementById("teamName")?.value,
+            region: document.getElementById("region")?.value,
+            country: document.getElementById("country")?.value,
+            mentorName: document.getElementById("mentorName")?.value,
+            hqName: document.getElementById("hqName")?.value,
+            hqEmail: document.getElementById("hqEmail")?.value,
+            hqPhone: document.getElementById("hqPhone")?.value,
+            hqPosition: document.getElementById("hqPosition")?.value,
+            opsName: document.getElementById("opsName")?.value,
+            opsEmail: document.getElementById("opsEmail")?.value,
+            opsPhone: document.getElementById("opsPhone")?.value,
+            opsPosition: document.getElementById("opsPosition")?.value
+        };
+        
+        assessmentData.scores = {};
+        assessmentData.evidence = {};
+        assessmentData.gaps = {};
+        assessmentData.actions = {};
+        
+        document.querySelectorAll(".score-select").forEach(select => {
+            const key = select.dataset.section + "-" + select.dataset.item;
+            const row = select.closest("tr");
+            
+            if(select.value) {
+                assessmentData.scores[key] = select.value;
+            }
+            
+            const evidenceInput = row.querySelector(".evidence-input");
+            const gapsInput = row.querySelector(".gaps-input");
+            const actionInput = row.querySelector(".action-input");
+            
+            if(evidenceInput) assessmentData.evidence[key] = evidenceInput.value;
+            if(gapsInput) assessmentData.gaps[key] = gapsInput.value;
+            if(actionInput) assessmentData.actions[key] = actionInput.value;
+        });
+        
+        assessmentData.comments = {};
+        SECTIONS_WITH_WEIGHT.forEach(section => {
+            const commentElement = document.getElementById(section.section + "Comments");
+            if(commentElement) {
+                assessmentData.comments[section.section + "Comments"] = commentElement.value;
+            }
+        });
+        
+        assessmentData.summary = {
+            strengths: document.getElementById("strengths")?.value,
+            criticalGaps: document.getElementById("criticalGaps")?.value,
+            immediateActions: document.getElementById("immediateActions")?.value,
+            shortTermActions: document.getElementById("shortTermActions")?.value,
+            mediumTermActions: document.getElementById("mediumTermActions")?.value,
+            technicalAssistance: document.getElementById("technicalAssistance")?.value,
+            trainingRequirements: document.getElementById("trainingRequirements")?.value,
+            resourceRequirements: document.getElementById("resourceRequirements")?.value,
+            nextSteps: document.getElementById("nextSteps")?.value,
+            completionDate: document.getElementById("completionDate")?.value,
+            reviewedBy: document.getElementById("reviewedBy")?.value,
+            mentorAssignment: document.getElementById("mentorAssignment")?.value
+        };
+        
+        localStorage.setItem("hidSCTAssessment", JSON.stringify(assessmentData));
+        showNotification("Progress saved successfully!");
+        updateProgress();
+    }
+    
+    function showNotification(message){
+        const notification = document.createElement("div");
+        notification.className = "notification";
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = "fadeOut .3s ease";
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+    
+    function updateScoreBadge(select){
+        const value = select.value;
+        select.className = "form-select score-select";
+        if(value !== "" && value !== "NA") {
+            select.classList.add("score-" + value);
+        }
+    }
+    
+    function updateProgress(){
+        let totalWeight = 0;
+        let weightedScore = 0;
+        let overallScore = 0;
+        
+        const sectionScores = {};
+        SECTIONS_WITH_WEIGHT.forEach(section => {
+            sectionScores[section.section] = {score: 0, maxScore: 0};
+        });
+        
+        let totalItems = 0;
+        let completedItems = 0;
+        
+        document.querySelectorAll(".score-select").forEach(select => {
+            const section = select.dataset.section;
+            if(sectionScores[section]) {
+                totalItems++;
+                if(select.value !== "") {
+                    completedItems++;
+                    if(select.value !== "NA") {
+                        sectionScores[section].score += parseInt(select.value);
+                        sectionScores[section].maxScore += 3;
+                    }
+                }
+            }
+        });
+        
+        let overallPercentage = 0;
+        SECTIONS_WITH_WEIGHT.forEach(section => {
+            const scoreData = sectionScores[section.section];
+            let percentage = 0;
+            if(scoreData.maxScore > 0) {
+                percentage = Math.round(scoreData.score / scoreData.maxScore * 100);
+            }
+            
+            const scoreDisplay = document.getElementById(section.section + "Score");
+            if(scoreDisplay) {
+                scoreDisplay.textContent = percentage + "% Complete";
+            }
+            
+            totalWeight += section.weight;
+            weightedScore += section.weight * percentage / 100;
+        });
+        
+        overallPercentage = totalWeight > 0 ? Math.round(weightedScore / totalWeight * 100) : 0;
+        
+        const completedSections = document.getElementById("completedSections");
+        if(completedSections) {
+            completedSections.textContent = Object.values(sectionScores).filter(s => s.maxScore > 0).length + "/" + SECTIONS_WITH_WEIGHT.length;
+        }
+        
+        const overallScoreDisplay = document.getElementById("overallScore");
+        if(overallScoreDisplay) {
+            overallScoreDisplay.textContent = overallPercentage + "%";
+        }
+        
+        const lastUpdated = document.getElementById("lastUpdated");
+        if(lastUpdated) {
+            lastUpdated.textContent = (new Date()).toLocaleDateString();
+        }
+        
+        document.getElementById("overallProgressBar").style.width = overallPercentage + "%";
+        document.getElementById("overallProgressText").textContent = overallPercentage + "%";
+        document.getElementById("sidebarProgressBar").style.width = overallPercentage + "%";
+        document.getElementById("sidebarProgressText").textContent = overallPercentage + "%";
+        
+        const progressTableBody = document.getElementById("progressTableBody");
+        const progressSidebarBody = document.getElementById("progressSidebarBody");
+        
+        if(!progressTableBody || !progressSidebarBody) {
+            return;
+        }
+        
+        progressTableBody.innerHTML = "";
+        progressSidebarBody.innerHTML = "";
+        
+        let cumulativeWeight = 0;
+        let cumulativeScore = 0;
+        
+        SECTIONS_WITH_WEIGHT.forEach(section => {
+            const scoreData = sectionScores[section.section];
+            let percentage = 0;
+            if(scoreData.maxScore > 0) {
+                percentage = Math.round(scoreData.score / scoreData.maxScore * 100);
+            }
+            
+            let status = "Not Started";
+            let statusClass = "bg-secondary";
+            
+            if(percentage === 100) {
+                status = "Completed";
+                statusClass = "bg-success";
+            } else if(percentage > 0) {
+                status = "In Progress";
+                statusClass = "bg-warning";
+            }
+            
+            cumulativeWeight += section.weight;
+            cumulativeScore += section.weight * percentage / 100;
+            
+            progressTableBody.innerHTML += `<tr><td>${section.name}</td><td>${section.weight}%</td><td><span class="badge ${statusClass}">${status}</span></td><td>${percentage}%</td></tr>`;
+            progressSidebarBody.innerHTML += `<tr><td>${section.name.split(" ")[0]}</td><td><span class="badge ${statusClass}">${status}</span></td><td>${percentage}%</td></tr>`;
+        });
+        
+        const totalPercentage = cumulativeWeight > 0 ? Math.round(cumulativeScore / cumulativeWeight * 100) : 0;
+        progressTableBody.innerHTML += `<tr class="table-primary fw-bold"><td>TOTAL</td><td>${cumulativeWeight}%</td><td></td><td>${totalPercentage}%</td></tr>`;
+    }
+    
+    function exportToExcel(){
+        saveProgress();
+        const workbook = XLSX.utils.book_new();
+        
+        // Team Info Sheet
+        const teamInfoData = [
+            ["Team Information", ""],
+            ["Team Name", assessmentData.teamInfo.teamName || ""],
+            ["Region", assessmentData.teamInfo.region || ""],
+            ["Country", assessmentData.teamInfo.country || ""],
+            ["Mentor Name", assessmentData.teamInfo.mentorName || ""],
+            [""],
+            ["Headquarters Contact", ""],
+            ["Name", assessmentData.teamInfo.hqName || ""],
+            ["Email", assessmentData.teamInfo.hqEmail || ""],
+            ["Phone", assessmentData.teamInfo.hqPhone || ""],
+            ["Position", assessmentData.teamInfo.hqPosition || ""],
+            [""],
+            ["Operations Contact", ""],
+            ["Name", assessmentData.teamInfo.opsName || ""],
+            ["Email", assessmentData.teamInfo.opsEmail || ""],
+            ["Phone", assessmentData.teamInfo.opsPhone || ""],
+            ["Position", assessmentData.teamInfo.opsPosition || ""]
+        ];
+        
+        const teamInfoSheet = XLSX.utils.aoa_to_sheet(teamInfoData);
+        XLSX.utils.book_append_sheet(workbook, teamInfoSheet, "Team Info");
+        
+        // Assessment Data Sheet
+        const assessmentDataArray = [["Standard ID", "Pillar", "Standard Statement", "Score", "Evidence", "Gaps", "Actions", "Comments"]];
+        
+        document.querySelectorAll(".score-select").forEach(select => {
+            const row = select.closest("tr");
+            const standardStatement = row.cells[0].innerHTML;
+            const pillar = select.dataset.section;
+            const standardId = select.dataset.section + "-" + select.dataset.item;
+            
+            assessmentDataArray.push([
+                standardId,
+                pillar,
+                standardStatement,
+                select.value || "",
+                row.querySelector(".evidence-input")?.value || "",
+                row.querySelector(".gaps-input")?.value || "",
+                row.querySelector(".action-input")?.value || "",
+                assessmentData.comments[pillar + "Comments"] || ""
+            ]);
+        });
+        
+        const assessmentSheet = XLSX.utils.aoa_to_sheet(assessmentDataArray);
+        XLSX.utils.book_append_sheet(workbook, assessmentSheet, "HID SCT Assessment");
+        
+        // Summary Sheet (if needed)
+        const summaryData = [
+            ["Assessment Summary", ""],
+            ["Strengths", assessmentData.summary.strengths || ""],
+            ["Critical Gaps", assessmentData.summary.criticalGaps || ""],
+            ["Immediate Actions", assessmentData.summary.immediateActions || ""],
+            ["Short Term Actions", assessmentData.summary.shortTermActions || ""],
+            ["Medium Term Actions", assessmentData.summary.mediumTermActions || ""],
+            ["Technical Assistance", assessmentData.summary.technicalAssistance || ""],
+            ["Training Requirements", assessmentData.summary.trainingRequirements || ""],
+            ["Resource Requirements", assessmentData.summary.resourceRequirements || ""],
+            ["Next Steps", assessmentData.summary.nextSteps || ""],
+            ["Completion Date", assessmentData.summary.completionDate || ""],
+            ["Reviewed By", assessmentData.summary.reviewedBy || ""],
+            ["Mentor Assignment", assessmentData.summary.mentorAssignment || ""]
+        ];
+        
+        const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+        
+        XLSX.writeFile(workbook, "HID_SCT_Assessment_" + (new Date()).toISOString().split("T")[0] + ".xlsx");
+        showNotification("Data exported to Excel successfully!");
+    }
+    
+    function importFromExcel(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const workbook = XLSX.read(e.target.result, {type: 'binary'});
+                
+                // Reset assessment data
+                assessmentData = {teamInfo: {}, scores: {}, evidence: {}, gaps: {}, actions: {}, comments: {}, summary: {}};
+                
+                // Parse Assessment sheet
+                const assessmentSheet = workbook.Sheets['HID SCT Assessment'];
+                if (assessmentSheet) {
+                    const assessmentDataArray = XLSX.utils.sheet_to_json(assessmentSheet, {header: 1});
+                    
+                    // Skip header row and process data
+                    for (let i = 1; i < assessmentDataArray.length; i++) {
+                        const row = assessmentDataArray[i];
+                        if (row && row.length >= 8) {
+                            const standardId = row[0];
+                            assessmentData.scores[standardId] = row[3] || '';
+                            assessmentData.evidence[standardId] = row[4] || '';
+                            assessmentData.gaps[standardId] = row[5] || '';
+                            assessmentData.actions[standardId] = row[6] || '';
+                            
+                            // Handle comments for the section
+                            const section = row[1];
+                            if (section && row[7]) {
+                                assessmentData.comments[section + 'Comments'] = row[7];
+                            }
+                        }
+                    }
+                }
+                
+                localStorage.setItem('hidSCTAssessment', JSON.stringify(assessmentData));
+                loadSavedData();
+                updateProgress();
+                showNotification('Data imported successfully!');
+                
+            } catch (error) {
+                console.error('Error importing Excel file:', error);
+                showNotification('Error importing file. Please check the file format.');
+            }
+        };
+        reader.readAsBinaryString(file);
+    }
     
     function addAppEventListeners(){
-        document.querySelectorAll("input, textarea, select").forEach(t=>{t.addEventListener("change",saveProgress)});
-        document.getElementById("btn-save").addEventListener("click",saveProgress);
-        document.getElementById("btn-export-json").addEventListener("click",()=>{saveProgress();const t=JSON.stringify(assessmentData,null,2),e=new Blob([t],{type:"application/json"}),n=URL.createObjectURL(e),o=document.createElement("a");o.href=n,o.download="HID_SCT_Assessment_"+(new Date).toISOString().split("T")[0]+".json",o.click(),URL.revokeObjectURL(n)});
-        document.getElementById("btn-export-excel").addEventListener("click",exportToExcel);
-        document.getElementById("btn-submit").addEventListener("click",()=>{saveProgress(),showNotification("Assessment submitted successfully!")});
-        document.getElementById("btn-import-excel").addEventListener("click",()=>{document.getElementById("data-file-input").click()});
-        document.getElementById("data-file-input").addEventListener("change",importFromExcel);
+        document.querySelectorAll("input, textarea, select").forEach(element => {
+            element.addEventListener("change", saveProgress);
+        });
+        
+        document.getElementById("btn-save").addEventListener("click", saveProgress);
+        
+        document.getElementById("btn-export-json").addEventListener("click", () => {
+            saveProgress();
+            const dataStr = JSON.stringify(assessmentData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "HID_SCT_Assessment_" + (new Date()).toISOString().split("T")[0] + ".json";
+            link.click();
+            URL.revokeObjectURL(url);
+        });
+        
+        document.getElementById("btn-export-excel").addEventListener("click", exportToExcel);
+        
+        document.getElementById("btn-submit").addEventListener("click", () => {
+            saveProgress();
+            showNotification("Assessment submitted successfully!");
+        });
+        
+        document.getElementById("btn-import-excel").addEventListener("click", () => {
+            document.getElementById("data-file-input").click();
+        });
+        
+        document.getElementById("data-file-input").addEventListener("change", function(event) {
+            importFromExcel(event);
+            // Reset the input to allow importing the same file again
+            event.target.value = '';
+        });
     }
     
     // Main entry point for the entire page
@@ -146,8 +528,13 @@
         
         document.getElementById('load-config-btn').addEventListener('click', () => configFileInput.click());
         
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragover', (e) => { 
+            e.preventDefault(); 
+            dropZone.classList.add('dragover'); 
+        });
+        
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
@@ -155,6 +542,7 @@
                 handleConfigFile(e.dataTransfer.files[0]);
             }
         });
+        
         configFileInput.addEventListener('change', (event) => {
             if (event.target.files.length > 0) {
                 handleConfigFile(event.target.files[0]);
@@ -162,7 +550,7 @@
         });
 
         function handleConfigFile(file) {
-             if (file && file.type === 'application/json') {
+            if (file && file.type === 'application/json') {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
