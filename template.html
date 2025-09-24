@@ -6,18 +6,62 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <style>:root{--primary:#0d6efd;--secondary:#6c757d;--success:#198754;--info:#0dcaf0;--warning:#ffc107;--danger:#dc3545;--light:#f8f9fa;--dark:#212529}body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f7f9;padding:20px 0}.app-container{max-width:1400px;margin:0 auto;background:white;box-shadow:0 0 15px rgba(0,0,0,.1);border-radius:8px;overflow:hidden}.sidebar{background-color:#2c3e50;color:white;height:100vh;position:sticky;top:0;padding-top:20px;overflow-y:auto}.sidebar .nav-link{color:rgba(255,255,255,.8);border-left:3px solid transparent;padding:10px 15px;margin:5px 0;transition:all .3s}.sidebar .nav-link:hover,.sidebar .nav-link.active{color:white;background-color:rgba(255,255,255,.1);border-left-color:var(--info)}.sidebar .nav-link i{margin-right:10px;width:20px;text-align:center}.main-content{padding:20px;max-height:100vh;overflow-y:auto}.progress-sidebar{background-color:#f8f9fa;height:100vh;position:sticky;top:0;padding:20px 15px;overflow-y:auto;border-left:1px solid #e9ecef}.progress-bar-container{background-color:#e9ecef;border-radius:5px;margin-bottom:20px;height:30px}.progress-bar{height:100%;border-radius:5px;transition:width .5s ease}.section-card{margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1);border:none;border-radius:8px}.section-header{background-color:#f8f9fa;padding:15px;border-bottom:1px solid #e9ecef;border-radius:8px 8px 0 0}.comments-section{background-color:#f8f9fa;padding:15px;border-radius:0 0 8px 8px;border-top:1px solid #e9ecef}.overview-card{text-align:center;padding:20px;border-radius:8px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1)}.overview-card .card-value{font-size:2rem;font-weight:bold;margin:10px 0}.score-display{font-size:1.2rem;font-weight:bold;color:var(--primary)}.assessment-table{width:100%;border-collapse:collapse;margin-bottom:20px}.assessment-table th,.assessment-table td{border:1px solid #dee2e6;padding:12px;text-align:left;vertical-align:middle}.assessment-table th{background-color:#f8f9fa;font-weight:600}.score-0{background:#fee2e2;color:#dc2626}.score-1{background:#fed7aa;color:#ea580c}.score-2{background:#fef3c7;color:#ca8a04}.score-3{background:#d1fae5;color:#059669}.notification{position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#4ade80 0%,#22c55e 100%);color:white;padding:15px 25px;border-radius:8px;box-shadow:0 5px 20px rgba(0,0,0,.2);z-index:1000;animation:slideIn .3s ease}.progress-sidebar-table{width:100%;font-size:.85rem}.progress-sidebar-table th,.progress-sidebar-table td{padding:8px 5px;border-bottom:1px solid #dee2e6}.progress-sidebar-table th{font-weight:600}.progress-sidebar-table tr:last-child td{border-bottom:none}@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes fadeOut{from{opacity:1}to{opacity:0}}.summary-textarea{min-height:100px;resize:vertical}.file-input{display:none}@media (max-width:992px){.progress-sidebar{display:none}.main-content{max-height:none}}@media (max-width:768px){.sidebar{height:auto;position:relative}.assessment-table{font-size:.9rem;display:block;overflow-x:auto}.assessment-table th,.assessment-table td{padding:8px;white-space:nowrap}}
-        #config-loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: center; justify-content: center; color: white; text-align: center; }
+    <style>
+        :root{--primary:#0d6efd;--secondary:#6c757d;--success:#198754;--info:#0dcaf0;--warning:#ffc107;--danger:#dc3545;--light:#f8f9fa;--dark:#212529}
+        body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f7f9;padding:0; margin:0;}
+        .app-container{max-width:100%; margin:0 auto;background:white;box-shadow:0 0 15px rgba(0,0,0,.1);border-radius:0;overflow:hidden}
+        .sidebar{background-color:#2c3e50;color:white;height:100vh;position:sticky;top:0;padding-top:20px;overflow-y:auto}
+        .sidebar .nav-link{color:rgba(255,255,255,.8);border-left:3px solid transparent;padding:10px 15px;margin:5px 0;transition:all .3s}
+        .sidebar .nav-link:hover,.sidebar .nav-link.active{color:white;background-color:rgba(255,255,255,.1);border-left-color:var(--info)}
+        .sidebar .nav-link i{margin-right:10px;width:20px;text-align:center}
+        .main-content{padding:20px;height:100vh;overflow-y:auto}
+        .progress-sidebar{background-color:#f8f9fa;height:100vh;position:sticky;top:0;padding:20px 15px;overflow-y:auto;border-left:1px solid #e9ecef}
+        .progress-bar-container{background-color:#e9ecef;border-radius:5px;margin-bottom:20px;height:30px}
+        .progress-bar{height:100%;border-radius:5px;transition:width .5s ease}
+        .section-card{margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1);border:none;border-radius:8px}
+        .section-header{background-color:#f8f9fa;padding:15px;border-bottom:1px solid #e9ecef;border-radius:8px 8px 0 0}
+        .comments-section{background-color:#f8f9fa;padding:15px;border-radius:0 0 8px 8px;border-top:1px solid #e9ecef}
+        .overview-card{text-align:center;padding:20px;border-radius:8px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1)}
+        .overview-card .card-value{font-size:2rem;font-weight:bold;margin:10px 0}
+        .score-display{font-size:1.2rem;font-weight:bold;color:var(--primary)}
+        .assessment-table{width:100%;border-collapse:collapse;margin-bottom:20px}
+        .assessment-table th,.assessment-table td{border:1px solid #dee2e6;padding:12px;text-align:left;vertical-align:middle}
+        .assessment-table th{background-color:#f8f9fa;font-weight:600}
+        .score-0{background:#fee2e2;color:#dc2626}.score-1{background:#fed7aa;color:#ea580c}.score-2{background:#fef3c7;color:#ca8a04}.score-3{background:#d1fae5;color:#059669}
+        .notification{position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#4ade80 0%,#22c55e 100%);color:white;padding:15px 25px;border-radius:8px;box-shadow:0 5px 20px rgba(0,0,0,.2);z-index:1000;animation:slideIn .3s ease}
+        .progress-sidebar-table{width:100%;font-size:.85rem}
+        .progress-sidebar-table th,.progress-sidebar-table td{padding:8px 5px;border-bottom:1px solid #dee2e6}
+        .progress-sidebar-table th{font-weight:600}
+        .progress-sidebar-table tr:last-child td{border-bottom:none}
+        @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+        @keyframes fadeOut{from{opacity:1}to{opacity:0}}
+        .summary-textarea{min-height:100px;resize:vertical}
+        .file-input{display:none}
+        #config-loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #343a40; z-index: 2000; display: flex; align-items: center; justify-content: center; color: white; text-align: center; flex-direction: column; transition: opacity 0.3s ease; }
+        #drop-zone { border: 3px dashed #6c757d; border-radius: 20px; padding: 50px; width: 80%; max-width: 600px; transition: background-color 0.2s ease, border-color 0.2s ease; }
+        #drop-zone.dragover { background-color: rgba(255, 255, 255, 0.1); border-color: var(--primary); }
         #app-wrapper { display: none; }
+        
+        /* RESPONSIVE DESIGN */
+        @media (max-width: 991.98px) {
+            .progress-sidebar { display: none; }
+            .main-content, .sidebar { height: auto; position: relative; }
+        }
+        @media (max-width: 767.98px) {
+            .sidebar { border-bottom: 2px solid var(--primary); }
+            .assessment-table-container { overflow-x: auto; }
+            .assessment-table { width: 800px; /* Force table to be wide */ }
+        }
     </style>
 </head>
 <body>
     <div id="config-loader-overlay">
-        <div>
+        <div id="drop-zone">
             <h1>Herramienta de Autoevaluación</h1>
-            <p class="lead">Por favor, carga tu archivo <code>config.json</code> para empezar.</p>
-            <button id="load-config-btn" class="btn btn-primary btn-lg mt-3"><i class="fas fa-upload me-2"></i>Cargar Configuración</button>
-            <input type="file" id="config-file-input" style="display: none;" accept=".json">
+            <p class="lead mt-3">Arrastra y suelta tu archivo <code>config.json</code> aquí</p>
+            <p>o</p>
+            <button id="load-config-btn" class="btn btn-primary btn-lg"><i class="fas fa-upload me-2"></i>Selecciona un Archivo</button>
+            <input type="file" id="config-file-input" class="file-input" accept=".json">
         </div>
     </div>
 
@@ -26,7 +70,7 @@
             <div class="row g-0">
                 <div class="col-lg-2"><div class="sidebar"><h4 class="text-center mb-4">HID SCT Assessment</h4><ul class="nav flex-column" id="sidebar-nav-container"></ul><div class="mt-4 p-3"><div class="progress-bar-container"><div class="progress-bar bg-success" id="overallProgressBar" style="width:0%"></div></div><p class="mb-1">Overall Completion</p><h5 class="text-center" id="overallProgressText">0%</h5></div></div></div>
                 <div class="col-lg-8"><div class="main-content"><div class="tab-content" id="tab-content-container"></div><div class="d-flex justify-content-between mt-4"><div><button class="btn btn-outline-secondary" id="btn-import-excel"><i class="fas fa-upload me-2"></i>Importar Datos Excel</button><button class="btn btn-outline-secondary" id="btn-export-json"><i class="fas fa-download me-2"></i>Exportar Datos JSON</button></div><div><button class="btn btn-outline-primary me-2" id="btn-save"><i class="fas fa-save me-2"></i>Guardar Borrador</button><button class="btn btn-outline-info me-2" id="btn-export-excel"><i class="fas fa-file-excel me-2"></i>Exportar a Excel</button><button class="btn btn-success" id="btn-submit"><i class="fas fa-check-circle me-2"></i>Enviar Evaluación</button></div></div></div></div>
-                <div class="col-lg-2"><div class="progress-sidebar"><h5 class="mb-3">Progress Overview</h5><div class="progress-bar-container mb-3"><div class="progress-bar bg-success" id="sidebarProgressBar" style="width:0%"></div></div><p class="mb-1">Overall Completion</p<h5 class="text-center mb-4" id="sidebarProgressText">0%</h5><table class="progress-sidebar-table"><thead><tr><th>Section</th><th>Status</th><th>%</th></tr></thead><tbody id="progressSidebarBody"></tbody></table></div></div>
+                <div class="col-lg-2"><div class="progress-sidebar"><h5 class="mb-3">Progress Overview</h5><div class="progress-bar-container mb-3"><div class="progress-bar bg-success" id="sidebarProgressBar" style="width:0%"></div></div><p class="mb-1">Overall Completion</p<h5 class="text-center mb-4" id="sidebarProgressText">0%</h5><table class="table table-bordered"><thead class="table-light"><tr><th>Section</th><th>Weight</th><th>Status</th><th>%</th></tr></thead><tbody id="progressSidebarBody"></tbody></table></div></div>
             </div>
         </div>
         <input type="file" id="data-file-input" class="file-input" accept=".xlsx, .xls">
@@ -38,7 +82,7 @@
     let SECTIONS_WITH_WEIGHT = [];
     let assessmentData = { teamInfo:{}, scores:{}, evidence:{}, gaps:{}, actions:{}, comments:{}, summary:{} };
 
-    function buildUI(config) {
+    function initializeApp(config) {
         CONFIG = config;
         SECTIONS_WITH_WEIGHT = Object.entries(CONFIG).filter(([,c]) => c.weight > 0).map(([k,c]) => ({ name: c.title.toUpperCase(), weight: c.weight, section: k }));
 
@@ -46,17 +90,17 @@
         const tabContent = document.getElementById('tab-content-container');
         let sidebarLinks = '', tabPanes = '';
 
-        Object.entries(CONFIG).forEach(([key, config]) => {
-            sidebarLinks += `<li class="nav-item"><a class="nav-link" href="#${key}" data-bs-toggle="tab"><i class="fas ${config.icon}"></i> ${config.title}</a></li>`;
+        Object.entries(CONFIG).forEach(([key, configData]) => {
+            sidebarLinks += `<li class="nav-item"><a class="nav-link" href="#${key}" data-bs-toggle="tab"><i class="fas ${configData.icon}"></i> ${configData.title}</a></li>`;
             
             let content = '';
-            if (config.hasSubsections) {
-                const tableRows = config.subsections.map(sub => {
+            if (configData.hasSubsections) {
+                const tableRows = configData.subsections.map(sub => {
                     const subId = sub.replace(/<[^>]*>?/gm, '').toLowerCase().replace(/[^\w\s]/gi, '').replace(/\s+/g, '-').slice(0, 50);
                     return `<tr><td>${sub}</td><td><select class="form-select score-select" data-section="${key}" data-item="${subId}"><option value="">-</option><option value="0">0 - Not started</option><option value="1">1 - Initial</option><option value="2">2 - In progress</option><option value="3">3 - Completed</option><option value="NA">N/A</option></select></td><td><textarea class="form-control evidence-input" rows="2"></textarea></td><td><textarea class="form-control gaps-input" rows="2"></textarea></td><td><textarea class="form-control action-input" rows="2"></textarea></td></tr>`;
                 }).join('');
-                content = `<div class="card section-card"><div class="section-header d-flex justify-content-between align-items-center"><h5>${config.title} Compliance</h5><div class="score-display" id="${key}Score">0% Complete</div></div><table class="assessment-table"><thead><tr><th width="40%">Standard</th><th width="10%">Score</th><th width="20%">Evidence</th><th width="15%">Gaps</th><th width="15%">Actions</th></tr></thead><tbody>${tableRows}</tbody></table><div class="comments-section"><label for="${key}Comments" class="form-label">Mentor Comments & Observations</label><textarea class="form-control" id="${key}Comments" rows="3"></textarea></div></div>`;
-            } else { content = config.content; }
+                content = `<div class="card section-card"><div class="section-header d-flex justify-content-between align-items-center"><h5>${configData.title} Compliance</h5><div class="score-display" id="${key}Score">0% Complete</div></div><div class="assessment-table-container"><table class="assessment-table"><thead><tr><th width="40%">Standard</th><th width="10%">Score</th><th width="20%">Evidence</th><th width="15%">Gaps</th><th width="15%">Actions</th></tr></thead><tbody>${tableRows}</tbody></table></div><div class="comments-section"><label for="${key}Comments" class="form-label">Mentor Comments & Observations</label><textarea class="form-control" id="${key}Comments" rows="3"></textarea></div></div>`;
+            } else { content = configData.content; }
             tabPanes += `<div class="tab-pane fade" id="${key}">${content}</div>`;
         });
 
@@ -68,11 +112,15 @@
         document.getElementById('config-loader-overlay').style.display = 'none';
         document.getElementById('app-wrapper').style.display = 'block';
 
-        initializeData();
+        const savedData = localStorage.getItem("hidSCTAssessment");
+        if(savedData) {
+            assessmentData = JSON.parse(savedData);
+            loadSavedData();
+        }
+        updateProgress();
+        addAppEventListeners();
     }
     
-    // ASSESSMENT LOGIC
-    function initializeData(){const t=localStorage.getItem("hidSCTAssessment");t&&(assessmentData=JSON.parse(t),loadSavedData()),updateProgress(),addEventListeners()}
     function loadSavedData(){if(assessmentData.teamInfo&&Object.keys(assessmentData.teamInfo).forEach(t=>{const e=document.getElementById(t);e&&(e.value=assessmentData.teamInfo[t])}),document.querySelectorAll(".score-select").forEach(t=>{const e=t.dataset.section+"-"+t.dataset.item;if(assessmentData.scores[e]){t.value=assessmentData.scores[e],updateScoreBadge(t);const n=t.closest("tr");n&&(n.querySelector(".evidence-input").value=assessmentData.evidence[e]||"",n.querySelector(".gaps-input").value=assessmentData.gaps[e]||"",n.querySelector(".action-input").value=assessmentData.actions[e]||"")}}),assessmentData.comments&&Object.keys(assessmentData.comments).forEach(t=>{const e=document.getElementById(t);e&&(e.value=assessmentData.comments[t])}),assessmentData.summary){const t=assessmentData.summary;Object.keys(t).forEach(e=>{const n=document.getElementById(e);n&&(n.value=t[e])})}}
     function saveProgress(){assessmentData.teamInfo={teamName:document.getElementById("teamName")?.value,region:document.getElementById("region")?.value,country:document.getElementById("country")?.value,mentorName:document.getElementById("mentorName")?.value,hqName:document.getElementById("hqName")?.value,hqEmail:document.getElementById("hqEmail")?.value,hqPhone:document.getElementById("hqPhone")?.value,hqPosition:document.getElementById("hqPosition")?.value,opsName:document.getElementById("opsName")?.value,opsEmail:document.getElementById("opsEmail")?.value,opsPhone:document.getElementById("opsPhone")?.value,opsPosition:document.getElementById("opsPosition")?.value},assessmentData.scores={},assessmentData.evidence={},assessmentData.gaps={},assessmentData.actions={},document.querySelectorAll(".score-select").forEach(t=>{const e=t.dataset.section+"-"+t.dataset.item,n=t.closest("tr");t.value&&(assessmentData.scores[e]=t.value);const o=n.querySelector(".evidence-input"),i=n.querySelector(".gaps-input"),s=n.querySelector(".action-input");o&&(assessmentData.evidence[e]=o.value),i&&(assessmentData.gaps[e]=i.value),s&&(assessmentData.actions[e]=s.value)}),assessmentData.comments={},SECTIONS_WITH_WEIGHT.forEach(t=>{const e=document.getElementById(t.section+"Comments");e&&(assessmentData.comments[t.section+"Comments"]=e.value)}),assessmentData.summary={strengths:document.getElementById("strengths")?.value,criticalGaps:document.getElementById("criticalGaps")?.value,immediateActions:document.getElementById("immediateActions")?.value,shortTermActions:document.getElementById("shortTermActions")?.value,mediumTermActions:document.getElementById("mediumTermActions")?.value,technicalAssistance:document.getElementById("technicalAssistance")?.value,trainingRequirements:document.getElementById("trainingRequirements")?.value,resourceRequirements:document.getElementById("resourceRequirements")?.value,nextSteps:document.getElementById("nextSteps")?.value,completionDate:document.getElementById("completionDate")?.value,reviewedBy:document.getElementById("reviewedBy")?.value,mentorAssignment:document.getElementById("mentorAssignment")?.value},localStorage.setItem("hidSCTAssessment",JSON.stringify(assessmentData)),showNotification("Progress saved successfully!"),updateProgress()}
     function showNotification(t){const e=document.createElement("div");e.className="notification",e.textContent=t,document.body.appendChild(e),setTimeout(()=>{e.style.animation="fadeOut .3s ease",setTimeout(()=>e.remove(),300)},3e3)}
@@ -80,28 +128,55 @@
     function updateProgress(){let t=0,e=0,n=0;const o={};SECTIONS_WITH_WEIGHT.forEach(t=>{o[t.section]={score:0,maxScore:0}});let i=0,s=0;document.querySelectorAll(".score-select").forEach(t=>{const e=t.dataset.section;o[e]&&(i++,""!==t.value&&(s++,"NA"!==t.value&&(o[e].score+=parseInt(t.value),o[e].maxScore+=3)))});let a=0;SECTIONS_WITH_WEIGHT.forEach(n=>{const i=o[n.section];let s=0;i.maxScore>0&&(s=Math.round(i.score/i.maxScore*100));const a=document.getElementById(n.section+"Score");a&&(a.textContent=s+"% Complete"),t+=n.weight,e+=n.weight*s/100}),a=t>0?Math.round(e/t*100):0,n=Object.values(o).filter(t=>t.maxScore>0).length;const c=document.getElementById("completedSections");c&&(c.textContent=n+"/"+SECTIONS_WITH_WEIGHT.length);const d=document.getElementById("overallScore");d&&(d.textContent=a+"%");const r=document.getElementById("lastUpdated");r&&(r.textContent=(new Date).toLocaleDateString()),document.getElementById("overallProgressBar").style.width=a+"%",document.getElementById("overallProgressText").textContent=a+"%",document.getElementById("sidebarProgressBar").style.width=a+"%",document.getElementById("sidebarProgressText").textContent=a+"%";const l=document.getElementById("progressTableBody"),m=document.getElementById("progressSidebarBody");if(!l || !m){return}; l.innerHTML="",m.innerHTML="";let g=0,p=0;SECTIONS_WITH_WEIGHT.forEach(t=>{const e=o[t.section];let n=0;e.maxScore>0&&(n=Math.round(e.score/e.maxScore*100));const i=0===n?"Not Started":n<100?"In Progress":"Completed",s="Completed"===i?"bg-success":"In Progress"===i?"bg-warning":"bg-secondary";g+=t.weight,p+=t.weight*n/100,l.innerHTML+=\`<tr><td>\${t.name}</td><td>\${t.weight}%</td><td><span class="badge \${s}">\${i}</span></td><td>\${n}%</td></tr>\`,m.innerHTML+=\`<tr><td>\${t.name.split(" ")[0]}</td><td><span class="badge \${s}">\${i}</span></td><td>\${n}%</td></tr>\`});const u=g>0?Math.round(p/g*100):0;l.innerHTML+=\`<tr class="table-primary fw-bold"><td>TOTAL</td><td>\${g}%</td><td></td><td>\${u}%</td></tr>\`}
     function exportToExcel(){saveProgress();const t=XLSX.utils.book_new(),e=[["Team Information",""],["Team Name",assessmentData.teamInfo.teamName||""],["Region",assessmentData.teamInfo.region||""],["Country",assessmentData.teamInfo.country||""],["Mentor Name",assessmentData.teamInfo.mentorName||""],[""],["Headquarters Contact",""],["Name",assessmentData.teamInfo.hqName||""],["Email",assessmentData.teamInfo.hqEmail||""],["Phone",assessmentData.teamInfo.hqPhone||""],["Position",assessmentData.teamInfo.hqPosition||""],[""],["Operations Contact",""],["Name",assessmentData.teamInfo.opsName||""],["Email",assessmentData.teamInfo.opsEmail||""],["Phone",assessmentData.teamInfo.opsPhone||""],["Position",assessmentData.teamInfo.opsPosition||""]],n=XLSX.utils.aoa_to_sheet(e);XLSX.utils.book_append_sheet(t,n,"Team Info");const o=[["Standard ID","Pillar","Standard Statement","Score","Evidence","Gaps","Actions","Comments"]];document.querySelectorAll(".score-select").forEach(t=>{const e=t.closest("tr"),n=e.cells[0].innerHTML,i=t.dataset.section,s=t.dataset.section+"-"+t.dataset.item;o.push([s,i,n,t.value||"",e.querySelector(".evidence-input")?.value||"",e.querySelector(".gaps-input")?.value||"",e.querySelector(".action-input")?.value||"",assessmentData.comments[i+"Comments"]||""])});const i=XLSX.utils.aoa_to_sheet(o);XLSX.utils.book_append_sheet(t,i,"HID SCT Assessment"),XLSX.writeFile(t,"HID_SCT_Assessment_"+(new Date).toISOString().split("T")[0]+".xlsx"),showNotification("Data exported to Excel successfully!")}
     function importFromExcel(t){const e=t.target.files[0];if(!e)return;const n=new FileReader;n.onload=function(t){try{XLSX.read(t.target.result,{type:"binary"});assessmentData={teamInfo:{},scores:{},evidence:{},gaps:{},actions:{},comments:{},summary:{}};const e=t.Sheets["HID SCT Assessment"],n=XLSX.utils.sheet_to_json(e);for(const t of n)assessmentData.scores[t["Standard ID"]]=t.Score,assessmentData.evidence[t["Standard ID"]]=t.Evidence,assessmentData.gaps[t["Standard ID"]]=t.Gaps,assessmentData.actions[t["Standard ID"]]=t.Actions;localStorage.setItem("hidSCTAssessment",JSON.stringify(assessmentData)),loadSavedData(),updateProgress(),showNotification("Data imported successfully!")}catch(t){showNotification("Error importing file.")}},n.readAsBinaryString(e)}
-    function addEventListeners(){document.querySelectorAll("input, textarea, select").forEach(t=>{t.addEventListener("change",saveProgress)}),document.getElementById("btn-save").addEventListener("click",saveProgress),document.getElementById("btn-export-json").addEventListener("click",()=>{saveProgress();const t=JSON.stringify(assessmentData,null,2),e=new Blob([t],{type:"application/json"}),n=URL.createObjectURL(e),o=document.createElement("a");o.href=n,o.download="HID_SCT_Assessment_"+(new Date).toISOString().split("T")[0]+".json",o.click(),URL.revokeObjectURL(n)}),document.getElementById("btn-export-excel").addEventListener("click",exportToExcel),document.getElementById("btn-submit").addEventListener("click",()=>{saveProgress(),showNotification("Assessment submitted successfully!")}),document.getElementById("btn-import-excel").addEventListener("click",()=>{document.getElementById("data-file-input").click()}),document.getElementById("data-file-input").addEventListener("change",importFromExcel)}
     
-    // Main entry point
+    function addAppEventListeners(){
+        document.querySelectorAll("input, textarea, select").forEach(t=>{t.addEventListener("change",saveProgress)});
+        document.getElementById("btn-save").addEventListener("click",saveProgress);
+        document.getElementById("btn-export-json").addEventListener("click",()=>{saveProgress();const t=JSON.stringify(assessmentData,null,2),e=new Blob([t],{type:"application/json"}),n=URL.createObjectURL(e),o=document.createElement("a");o.href=n,o.download="HID_SCT_Assessment_"+(new Date).toISOString().split("T")[0]+".json",o.click(),URL.revokeObjectURL(n)});
+        document.getElementById("btn-export-excel").addEventListener("click",exportToExcel);
+        document.getElementById("btn-submit").addEventListener("click",()=>{saveProgress(),showNotification("Assessment submitted successfully!")});
+        document.getElementById("btn-import-excel").addEventListener("click",()=>{document.getElementById("data-file-input").click()});
+        document.getElementById("data-file-input").addEventListener("change",importFromExcel);
+    }
+    
+    // Main entry point for the entire page
     document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById('load-config-btn').addEventListener('click', () => {
-            document.getElementById('config-file-input').click();
+        const dropZone = document.getElementById('drop-zone');
+        const configFileInput = document.getElementById('config-file-input');
+        
+        document.getElementById('load-config-btn').addEventListener('click', () => configFileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleConfigFile(e.dataTransfer.files[0]);
+            }
         });
-        document.getElementById('config-file-input').addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
+        configFileInput.addEventListener('change', (event) => {
+            if (event.target.files.length > 0) {
+                handleConfigFile(event.target.files[0]);
+            }
+        });
+
+        function handleConfigFile(file) {
+             if (file && file.type === 'application/json') {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
                         const config = JSON.parse(e.target.result);
-                        buildUI(config);
+                        initializeApp(config);
                     } catch (error) {
                         alert('Error: El archivo de configuración no es un JSON válido.');
                     }
                 };
                 reader.readAsText(file);
+            } else {
+                alert('Por favor, selecciona o arrastra un archivo .json válido.');
             }
-        });
+        }
     });
     </script>
 </body>
