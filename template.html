@@ -24,10 +24,23 @@
         .overview-card{text-align:center;padding:20px;border-radius:8px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1)}
         .overview-card .card-value{font-size:2rem;font-weight:bold;margin:10px 0}
         .score-display{font-size:1.2rem;font-weight:bold;color:var(--primary)}
-        .assessment-table{width:100%;border-collapse:collapse;margin-bottom:20px}
-        .assessment-table th,.assessment-table td{border:1px solid #dee2e6;padding:12px;text-align:left;vertical-align:middle}
+        .assessment-table{width:100%;border-collapse:collapse;margin-bottom:20px;table-layout: fixed;}
+        .assessment-table th,.assessment-table td{border:1px solid #dee2e6;padding:12px;text-align:left;vertical-align:top}
         .assessment-table th{background-color:#f8f9fa;font-weight:600}
-        .score-0{background:#fee2e2;color:#dc2626}.score-1{background:#fed7aa;color:#ea580c}.score-2{background:#fef3c7;color:#ca8a04}.score-3{background:#d1fae5;color:#059669}
+        /* Improved score styling for better visibility */
+        .score-select{font-weight:bold;text-align:center;min-width:120px;}
+        .score-0{background:#fee2e2;color:#dc2626 !important;border:1px solid #dc2626}
+        .score-1{background:#fed7aa;color:#ea580c !important;border:1px solid #ea580c}
+        .score-2{background:#fef3c7;color:#ca8a04 !important;border:1px solid #ca8a04}
+        .score-3{background:#d1fae5;color:#059669 !important;border:1px solid #059669}
+        .score-NA{background:#f3f4f6;color:#6b7280 !important;border:1px solid #d1d5db}
+        /* Improved column widths */
+        .assessment-table th:nth-child(1), .assessment-table td:nth-child(1){width:40%;} /* Standard */
+        .assessment-table th:nth-child(2), .assessment-table td:nth-child(2){width:12%;} /* Score */
+        .assessment-table th:nth-child(3), .assessment-table td:nth-child(3){width:20%;} /* Evidence */
+        .assessment-table th:nth-child(4), .assessment-table td:nth-child(4){width:14%;} /* Gaps */
+        .assessment-table th:nth-child(5), .assessment-table td:nth-child(5){width:14%;} /* Actions */
+        .evidence-input, .gaps-input, .action-input{resize:vertical;min-height:60px;font-size:0.9rem;}
         .notification{position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#4ade80 0%,#22c55e 100%);color:white;padding:15px 25px;border-radius:8px;box-shadow:0 5px 20px rgba(0,0,0,.2);z-index:1000;animation:slideIn .3s ease}
         .progress-sidebar-table{width:100%;font-size:.85rem}
         .progress-sidebar-table th,.progress-sidebar-table td{padding:8px 5px;border-bottom:1px solid #dee2e6}
@@ -51,6 +64,8 @@
             .sidebar { border-bottom: 2px solid var(--primary); }
             .assessment-table-container { overflow-x: auto; }
             .assessment-table { width: 800px; /* Force table to be wide */ }
+            .assessment-table th, .assessment-table td { padding: 8px; font-size: 0.9rem; }
+            .score-select { min-width: 100px; font-size: 0.85rem; }
         }
     </style>
 </head>
@@ -97,17 +112,65 @@
             if (configData.hasSubsections) {
                 const tableRows = configData.subsections.map(sub => {
                     const subId = sub.replace(/<[^>]*>?/gm, '').toLowerCase().replace(/[^\w\s]/gi, '').replace(/\s+/g, '-').slice(0, 50);
-                    return `<tr><td>${sub}</td><td><select class="form-select score-select" data-section="${key}" data-item="${subId}"><option value="">-</option><option value="0">0 - Not started</option><option value="1">1 - Initial</option><option value="2">2 - In progress</option><option value="3">3 - Completed</option><option value="NA">N/A</option></select></td><td><textarea class="form-control evidence-input" rows="2"></textarea></td><td><textarea class="form-control gaps-input" rows="2"></textarea></td><td><textarea class="form-control action-input" rows="2"></textarea></td></tr>`;
+                    return `<tr>
+                        <td>${sub}</td>
+                        <td>
+                            <select class="form-select score-select" data-section="${key}" data-item="${subId}">
+                                <option value="">-</option>
+                                <option value="0">0 - Not started</option>
+                                <option value="1">1 - Initial</option>
+                                <option value="2">2 - In progress</option>
+                                <option value="3">3 - Completed</option>
+                                <option value="NA">N/A</option>
+                            </select>
+                        </td>
+                        <td><textarea class="form-control evidence-input" rows="2" placeholder="Describe evidence..."></textarea></td>
+                        <td><textarea class="form-control gaps-input" rows="2" placeholder="Identify gaps..."></textarea></td>
+                        <td><textarea class="form-control action-input" rows="2" placeholder="Plan actions..."></textarea></td>
+                    </tr>`;
                 }).join('');
-                content = `<div class="card section-card"><div class="section-header d-flex justify-content-between align-items-center"><h5>${configData.title} Compliance</h5><div class="score-display" id="${key}Score">0% Complete</div></div><div class="assessment-table-container"><table class="assessment-table"><thead><tr><th width="40%">Standard</th><th width="10%">Score</th><th width="20%">Evidence</th><th width="15%">Gaps</th><th width="15%">Actions</th></tr></thead><tbody>${tableRows}</tbody></table></div><div class="comments-section"><label for="${key}Comments" class="form-label">Mentor Comments & Observations</label><textarea class="form-control" id="${key}Comments" rows="3"></textarea></div></div>`;
-            } else { content = configData.content; }
+                content = `<div class="card section-card">
+                    <div class="section-header d-flex justify-content-between align-items-center">
+                        <h5>${configData.title} Compliance</h5>
+                        <div class="score-display" id="${key}Score">0% Complete</div>
+                    </div>
+                    <div class="assessment-table-container">
+                        <table class="assessment-table">
+                            <thead>
+                                <tr>
+                                    <th>Standard</th>
+                                    <th>Score</th>
+                                    <th>Evidence</th>
+                                    <th>Gaps</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>${tableRows}</tbody>
+                        </table>
+                    </div>
+                    <div class="comments-section">
+                        <label for="${key}Comments" class="form-label">Mentor Comments & Observations</label>
+                        <textarea class="form-control" id="${key}Comments" rows="3" placeholder="Add comments and observations..."></textarea>
+                    </div>
+                </div>`;
+            } else { 
+                content = configData.content; 
+            }
             tabPanes += `<div class="tab-pane fade" id="${key}">${content}</div>`;
         });
 
         sidebarNav.innerHTML = sidebarLinks;
         tabContent.innerHTML = tabPanes;
-        sidebarNav.querySelector('.nav-link').classList.add('active');
-        tabContent.querySelector('.tab-pane').classList.add('show', 'active');
+        
+        // Activate first tab
+        const firstNavLink = sidebarNav.querySelector('.nav-link');
+        if (firstNavLink) {
+            firstNavLink.classList.add('active');
+        }
+        const firstTabPane = tabContent.querySelector('.tab-pane');
+        if (firstTabPane) {
+            firstTabPane.classList.add('show', 'active');
+        }
 
         document.getElementById('config-loader-overlay').style.display = 'none';
         document.getElementById('app-wrapper').style.display = 'block';
@@ -245,9 +308,13 @@
     
     function updateScoreBadge(select){
         const value = select.value;
-        select.className = "form-select score-select";
+        // Reset all score classes
+        select.classList.remove("score-0", "score-1", "score-2", "score-3", "score-NA");
+        
         if(value !== "" && value !== "NA") {
             select.classList.add("score-" + value);
+        } else if (value === "NA") {
+            select.classList.add("score-NA");
         }
     }
     
@@ -392,7 +459,7 @@
         
         document.querySelectorAll(".score-select").forEach(select => {
             const row = select.closest("tr");
-            const standardStatement = row.cells[0].innerHTML;
+            const standardStatement = row.cells[0].textContent;
             const pillar = select.dataset.section;
             const standardId = select.dataset.section + "-" + select.dataset.item;
             
@@ -411,7 +478,7 @@
         const assessmentSheet = XLSX.utils.aoa_to_sheet(assessmentDataArray);
         XLSX.utils.book_append_sheet(workbook, assessmentSheet, "HID SCT Assessment");
         
-        // Summary Sheet (if needed)
+        // Summary Sheet
         const summaryData = [
             ["Assessment Summary", ""],
             ["Strengths", assessmentData.summary.strengths || ""],
@@ -485,10 +552,19 @@
     }
     
     function addAppEventListeners(){
+        // Add event listeners to all form elements
         document.querySelectorAll("input, textarea, select").forEach(element => {
             element.addEventListener("change", saveProgress);
         });
         
+        // Score select change handler
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('score-select')) {
+                updateScoreBadge(e.target);
+            }
+        });
+        
+        // Button event listeners
         document.getElementById("btn-save").addEventListener("click", saveProgress);
         
         document.getElementById("btn-export-json").addEventListener("click", () => {
@@ -518,6 +594,14 @@
             importFromExcel(event);
             // Reset the input to allow importing the same file again
             event.target.value = '';
+        });
+        
+        // Tab navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function() {
+                document.querySelectorAll('.nav-link').forEach(nav => nav.classList.remove('active'));
+                this.classList.add('active');
+            });
         });
     }
     
@@ -550,7 +634,7 @@
         });
 
         function handleConfigFile(file) {
-            if (file && file.type === 'application/json') {
+            if (file && (file.type === 'application/json' || file.name.endsWith('.json'))) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
