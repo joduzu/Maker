@@ -116,8 +116,7 @@
                         <td>${sub}</td>
                         <td>
                             <select class="form-select score-select" data-section="${key}" data-item="${subId}">
-                                <option value="">-</option>
-                                <option value="0">0 - Not started</option>
+                                <option value="0" selected>0 - Not started</option>
                                 <option value="1">1 - Initial</option>
                                 <option value="2">2 - In progress</option>
                                 <option value="3">3 - Completed</option>
@@ -177,11 +176,27 @@
 
         const savedData = localStorage.getItem("hidSCTAssessment");
         if(savedData) {
+            // Load existing data
             assessmentData = JSON.parse(savedData);
             loadSavedData();
+        } else {
+            // Initialize with default "Not started" values for new config
+            initializeDefaultScores();
         }
+        
         updateProgress();
         addAppEventListeners();
+    }
+    
+    function initializeDefaultScores() {
+        // Set all scores to "0" (Not started) by default for new assessments
+        document.querySelectorAll(".score-select").forEach(select => {
+            select.value = "0";
+            updateScoreBadge(select);
+        });
+        
+        // Save the default state
+        saveProgress();
     }
     
     function loadSavedData(){
