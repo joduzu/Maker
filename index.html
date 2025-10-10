@@ -981,7 +981,9 @@
         if (titleInput) {
             const updateTitle = () => {
                 const defaultIndex = parseInt(newItem.dataset.defaultIndex, 10);
-                const fallbackTitle = Number.isFinite(defaultIndex) ? `Standard ${defaultIndex + 1}` : 'Standard';
+                const fallbackTitle = Number.isFinite(defaultIndex)
+                    ? `Standard ${defaultIndex + 1}`
+                    : `Standard ${index + 1}`;
                 const value = titleInput.value.trim() || fallbackTitle;
                 newItem.dataset.title = value;
                 const details = newItem.querySelector('.builder-deployment-editor');
@@ -1400,27 +1402,8 @@
                 editor.classList.toggle('empty', text.length === 0);
             };
 
-            const syncSubsectionMetadata = () => {
-                const subsectionItem = editor.closest('.subsection-item');
-                if (!subsectionItem) {
-                    return;
-                }
-                const defaultIndex = parseInt(subsectionItem.dataset.defaultIndex || '0', 10);
-                const newTitle = extractTitleTextFromHTML(editor.innerHTML, isNaN(defaultIndex) ? 0 : defaultIndex);
-                subsectionItem.dataset.title = newTitle;
-                const summaryTitle = subsectionItem.querySelector('.builder-deployment-summary-title');
-                if (summaryTitle) {
-                    summaryTitle.textContent = newTitle;
-                }
-                const details = subsectionItem.querySelector('.builder-deployment-editor');
-                if (details) {
-                    details.dataset.title = newTitle;
-                }
-            };
-
             const handleInput = () => {
                 updatePlaceholderState();
-                syncSubsectionMetadata();
                 storeSelection(editor);
             };
 
@@ -1441,7 +1424,6 @@
             const persistSelection = () => storeSelection(editor);
 
             updatePlaceholderState();
-            syncSubsectionMetadata();
 
             editor.addEventListener('input', handleInput);
             editor.addEventListener('focus', handleFocus);
@@ -1450,7 +1432,6 @@
             editor.addEventListener('mouseup', persistSelection);
 
             editor._updatePlaceholder = updatePlaceholderState;
-            editor._syncSubsectionMetadata = syncSubsectionMetadata;
         });
 
         root.querySelectorAll('.format-btn').forEach(btn => {
@@ -1474,7 +1455,6 @@
                 restoreSelection(editor);
                 document.execCommand(command, false, value);
                 editor._updatePlaceholder?.();
-                editor._syncSubsectionMetadata?.();
                 storeSelection(editor);
             });
         });
@@ -1509,9 +1489,26 @@
                     const editor = item.querySelector('.editor-content');
                     const content = editor ? editor.innerHTML.trim() : '';
                     const itemKey = item.dataset.itemKey || generateSubsectionKey(key);
-                    let titleText = item.dataset.title || extractTitleTextFromHTML(content, index);
+                    const titleInput = item.querySelector('.standard-title-input');
+                    const defaultIndex = parseInt(item.dataset.defaultIndex, 10);
+                    const fallbackTitle = Number.isFinite(defaultIndex)
+                        ? `Standard ${defaultIndex + 1}`
+                        : `Standard ${index + 1}`;
+                    let titleText = titleInput ? titleInput.value.trim() : '';
+                    if (!titleText && item.dataset.title) {
+                        titleText = item.dataset.title.trim();
+                    }
                     if (!titleText) {
-                        titleText = `Standard ${index + 1}`;
+                        titleText = fallbackTitle;
+                    }
+                    item.dataset.title = titleText;
+                    const summaryTitle = item.querySelector('.builder-deployment-summary-title');
+                    if (summaryTitle) {
+                        summaryTitle.textContent = titleText;
+                    }
+                    const details = item.querySelector('.builder-deployment-editor');
+                    if (details) {
+                        details.dataset.title = titleText;
                     }
                     ensureDeploymentOverride(key, itemKey, titleText);
                     return { content, itemKey, titleText };
