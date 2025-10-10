@@ -833,21 +833,89 @@
         `;
     }
 
-    function splitStandardContent(html, fallbackIndex = 0) {
+    function splitStandardContent(html, fallbackIndex = 0, knownTitle = '') {
         const raw = String(html || '').trim();
+        const fallbackTitle = `Standard ${fallbackIndex + 1}`;
         const separators = [': ', ' – ', ' - ', ' — ', ':', '–', '-', '—'];
+        if (!raw) {
+            const titleText = knownTitle || fallbackTitle;
+            return { titleHTML: knownTitle || '', bodyHTML: '', titleText };
+        }
+
         let titleHTML = raw;
         let bodyHTML = raw;
+        let matched = false;
         for (const sep of separators) {
             const idx = raw.indexOf(sep);
             if (idx > -1) {
                 titleHTML = raw.slice(0, idx);
                 bodyHTML = raw.slice(idx + sep.length).trim() || raw;
+                matched = true;
                 break;
             }
         }
-        const titleText = extractTitleTextFromHTML(titleHTML, fallbackIndex);
-        return { titleHTML, bodyHTML, titleText };
+
+        const titleSource = matched ? titleHTML : (knownTitle || raw);
+        let titleText = extractTitleTextFromHTML(titleSource || '', fallbackIndex) || knownTitle || fallbackTitle;
+
+        const shouldStripBody = matched || Boolean(knownTitle);
+        if (shouldStripBody && titleText) {
+            const cleaned = stripLeadingTitleFromHTML(bodyHTML, titleText);
+            bodyHTML = cleaned.html;
+            if (!matched && cleaned.removed) {
+                matched = true;
+            }
+        }
+
+        return { titleHTML: titleSource || '', bodyHTML, titleText };
+    }
+
+    function stripLeadingTitleFromHTML(html, titleText) {
+        const container = document.createElement('div');
+        container.innerHTML = String(html || '');
+        const normalizedTitle = normalizeStandardName(titleText);
+        if (!normalizedTitle) {
+            return { html: container.innerHTML.trim(), removed: false };
+        }
+
+        let removed = false;
+        const shouldRemoveNode = (node) => {
+            if (!node) return false;
+            if (node.nodeType === Node.TEXT_NODE) {
+                const normalized = normalizeStandardName(node.textContent || '');
+                return normalized === '' || normalized === normalizedTitle;
+            }
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const tag = node.tagName.toLowerCase();
+                if (tag === 'br') {
+                    return true;
+                }
+                const normalized = normalizeStandardName(node.textContent || '');
+                if (!normalized) {
+                    return true;
+                }
+                return normalized === normalizedTitle;
+            }
+            return false;
+        };
+
+        while (container.firstChild) {
+            const node = container.firstChild;
+            if (shouldRemoveNode(node)) {
+                container.removeChild(node);
+                removed = true;
+                continue;
+            }
+            const normalized = normalizeStandardName(node.textContent || '');
+            if (normalized === normalizedTitle) {
+                container.removeChild(node);
+                removed = true;
+                continue;
+            }
+            break;
+        }
+
+        return { html: container.innerHTML.trim(), removed };
     }
 
     function setupDeploymentPrefillEditors(root = document) {
@@ -888,7 +956,8 @@
         if (!container) return null;
         const index = typeof options.index === 'number' ? options.index : container.querySelectorAll('.subsection-item').length;
         const itemKey = options.itemKey || generateSubsectionKey(sectionKey);
-        const titleText = options.titleText || extractTitleTextFromHTML(subContent, index);
+        const parsedContent = splitStandardContent(subContent, index, options.titleText);
+        const titleText = options.titleText || parsedContent.titleText || `Standard ${index + 1}`;
         ensureDeploymentOverride(sectionKey, itemKey, titleText);
         const subsectionHTML = `
             <div class="subsection-item" data-section="${sectionKey}" data-item-key="${itemKey}" data-default-index="${index}" data-title="${escapeHTML(titleText)}">
@@ -896,7 +965,7 @@
                     <label class="form-label">Standard Name</label>
                     <input type="text" class="form-control standard-title-input" data-section="${sectionKey}" data-item-key="${itemKey}" value="${escapeHTML(titleText)}" placeholder="Enter the standard title">
                 </div>
-                ${getEditorTemplate(subContent)}
+                ${getEditorTemplate(parsedContent.bodyHTML)}
                 ${buildBuilderDeploymentEditor(sectionKey, itemKey, titleText)}
                 <div class="subsection-actions">
                     <button class="btn btn-danger btn-sm remove-item" type="button"><i class="fas fa-trash"></i></button>
@@ -912,7 +981,9 @@
         if (titleInput) {
             const updateTitle = () => {
                 const defaultIndex = parseInt(newItem.dataset.defaultIndex, 10);
-                const fallbackTitle = Number.isFinite(defaultIndex) ? `Standard ${defaultIndex + 1}` : 'Standard';
+                const fallbackTitle = Number.isFinite(defaultIndex)
+                    ? `Standard ${defaultIndex + 1}`
+                    : `Standard ${index + 1}`;
                 const value = titleInput.value.trim() || fallbackTitle;
                 newItem.dataset.title = value;
                 const details = newItem.querySelector('.builder-deployment-editor');
@@ -1331,27 +1402,8 @@
                 editor.classList.toggle('empty', text.length === 0);
             };
 
-            const syncSubsectionMetadata = () => {
-                const subsectionItem = editor.closest('.subsection-item');
-                if (!subsectionItem) {
-                    return;
-                }
-                const defaultIndex = parseInt(subsectionItem.dataset.defaultIndex || '0', 10);
-                const newTitle = extractTitleTextFromHTML(editor.innerHTML, isNaN(defaultIndex) ? 0 : defaultIndex);
-                subsectionItem.dataset.title = newTitle;
-                const summaryTitle = subsectionItem.querySelector('.builder-deployment-summary-title');
-                if (summaryTitle) {
-                    summaryTitle.textContent = newTitle;
-                }
-                const details = subsectionItem.querySelector('.builder-deployment-editor');
-                if (details) {
-                    details.dataset.title = newTitle;
-                }
-            };
-
             const handleInput = () => {
                 updatePlaceholderState();
-                syncSubsectionMetadata();
                 storeSelection(editor);
             };
 
@@ -1372,7 +1424,6 @@
             const persistSelection = () => storeSelection(editor);
 
             updatePlaceholderState();
-            syncSubsectionMetadata();
 
             editor.addEventListener('input', handleInput);
             editor.addEventListener('focus', handleFocus);
@@ -1381,7 +1432,6 @@
             editor.addEventListener('mouseup', persistSelection);
 
             editor._updatePlaceholder = updatePlaceholderState;
-            editor._syncSubsectionMetadata = syncSubsectionMetadata;
         });
 
         root.querySelectorAll('.format-btn').forEach(btn => {
@@ -1405,7 +1455,6 @@
                 restoreSelection(editor);
                 document.execCommand(command, false, value);
                 editor._updatePlaceholder?.();
-                editor._syncSubsectionMetadata?.();
                 storeSelection(editor);
             });
         });
@@ -1440,9 +1489,26 @@
                     const editor = item.querySelector('.editor-content');
                     const content = editor ? editor.innerHTML.trim() : '';
                     const itemKey = item.dataset.itemKey || generateSubsectionKey(key);
-                    let titleText = item.dataset.title || extractTitleTextFromHTML(content, index);
+                    const titleInput = item.querySelector('.standard-title-input');
+                    const defaultIndex = parseInt(item.dataset.defaultIndex, 10);
+                    const fallbackTitle = Number.isFinite(defaultIndex)
+                        ? `Standard ${defaultIndex + 1}`
+                        : `Standard ${index + 1}`;
+                    let titleText = titleInput ? titleInput.value.trim() : '';
+                    if (!titleText && item.dataset.title) {
+                        titleText = item.dataset.title.trim();
+                    }
                     if (!titleText) {
-                        titleText = `Standard ${index + 1}`;
+                        titleText = fallbackTitle;
+                    }
+                    item.dataset.title = titleText;
+                    const summaryTitle = item.querySelector('.builder-deployment-summary-title');
+                    if (summaryTitle) {
+                        summaryTitle.textContent = titleText;
+                    }
+                    const details = item.querySelector('.builder-deployment-editor');
+                    if (details) {
+                        details.dataset.title = titleText;
                     }
                     ensureDeploymentOverride(key, itemKey, titleText);
                     return { content, itemKey, titleText };
@@ -1561,7 +1627,7 @@
             const entry = (subEntry && typeof subEntry === 'object' && subEntry.content !== undefined)
                 ? subEntry
                 : { content: subEntry };
-            const parsed = splitStandardContent(entry.content || '', index);
+            const parsed = splitStandardContent(entry.content || '', index, entry.titleText);
             const titleText = entry.titleText || parsed.titleText || `Standard ${index + 1}`;
             const baseId = stripHTML(`${titleText}-${index + 1}`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
             const subId = `${index + 1}-${baseId || 'item'}`.slice(0, 60);
