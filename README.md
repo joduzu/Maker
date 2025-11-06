@@ -944,12 +944,12 @@ Special thanks to:
 
 ## 📚 Additional Resources
 
-- [WHO Classification and Minimum Standards for EMTs](https://www.who.int/publications/i/item/978-92-4-151426-2)
+- [WHO Classification and Minimum Standards for EMTs](https://iris.who.int/server/api/core/bitstreams/f1a9750a-f68b-401c-87ea-c5157a3af6d9/content)
 - [Bootstrap Documentation](https://getbootstrap.com/docs/5.3/)
 - [FontAwesome Icons](https://fontawesome.com/icons)
 
 ---
 
-**Last Updated:** January 2025
+**Last Updated:** November 2025
 **Version:** 2.0
 **Status:** Production Ready ✅
