@@ -7,6 +7,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7f9; padding: 40px; }
         .maker-container { max-width: 1200px; margin: 0 auto; background: white; box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); border-radius: 12px; padding: 30px; }
@@ -22,7 +25,101 @@
         .modality-option.coupled .modality-icon { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
         .modality-option.self-sustained .modality-icon { background: linear-gradient(135deg, #16a34a, #22c55e); }
         .modality-option.selected { border-color: transparent; background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(99, 102, 241, 0.2)); }
-        .subsection-item { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; padding: 16px; border: 1px solid #e9ecef; border-radius: 12px; background: #fff; }
+        .subsection-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 16px;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            background: #fff;
+            cursor: move;
+            transition: all 0.2s ease;
+        }
+
+        .subsection-item.dragging {
+            opacity: 0.5;
+            background: #f0f0f0;
+            transform: scale(0.98);
+        }
+
+        .subsection-item.drag-over {
+            border-top: 3px solid #0d6efd;
+        }
+
+        .subsection-drag-handle {
+            display: flex;
+            align-items: flex-start;
+            padding-top: 8px;
+            color: #6c757d;
+            font-size: 1.2rem;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .subsection-drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .subsection-content-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .subsection-collapse-header {
+            background: linear-gradient(90deg, #eef2ff 0%, #f7f9ff 100%);
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #e0e7ff;
+            margin-bottom: 0;
+        }
+
+        .subsection-collapse-header:hover {
+            background: linear-gradient(90deg, #e0e7ff 0%, #eef2ff 100%);
+        }
+
+        .subsection-collapse-header[aria-expanded="true"] {
+            background: linear-gradient(90deg, #4f46e5 0%, #6366f1 100%);
+            border-color: #4f46e5;
+        }
+
+        .subsection-collapse-header[aria-expanded="true"] .subsection-collapse-title,
+        .subsection-collapse-header[aria-expanded="true"] .collapse-toggle-icon {
+            color: white !important;
+        }
+
+        .subsection-collapse-title {
+            color: #4338ca;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .collapse-toggle-icon {
+            transition: transform 0.2s ease;
+            color: #4338ca;
+            font-size: 0.9rem;
+        }
+
+        .subsection-collapse-header[aria-expanded="true"] .collapse-toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .subsection-collapse-body {
+            padding: 16px;
+            padding-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border: 1px solid #e0e7ff;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            background: white;
+        }
+
         .subsection-item .rich-text-editor { flex: 1; }
         .subsection-actions { display: flex; justify-content: flex-end; }
         .subsection-actions .btn { min-width: 120px; }
@@ -39,6 +136,74 @@
         .editor-content { border: 1px solid #ced4da; border-radius: 8px; min-height: 80px; padding: 10px; background-color: #fff; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
         .editor-content:focus, .editor-content.focus { outline: none; border-color: #0d6efd; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
         .editor-content.empty::before { content: attr(data-placeholder); color: #6c757d; pointer-events: none; }
+
+        /* Table styles in editor */
+        .editor-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+            border: 1px solid #dee2e6;
+            position: relative;
+        }
+
+        .editor-content table.resizable {
+            resize: both;
+            overflow: auto;
+            display: inline-table;
+        }
+
+        .editor-content th,
+        .editor-content td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            min-width: 50px;
+            position: relative;
+        }
+
+        /* Link styles in editor */
+        .editor-content a {
+            color: #0d6efd;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .editor-content a:hover {
+            color: #0a58ca;
+            text-decoration: underline;
+        }
+
+        .editor-content th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .editor-content td {
+            background-color: white;
+        }
+
+        [data-theme="dark"] .editor-content table {
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .editor-content th {
+            background-color: #2d2d2d;
+        }
+
+        [data-theme="dark"] .editor-content td {
+            background-color: var(--bg-card);
+            border-color: var(--border-color);
+        }
+
+        .table-resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 10px;
+            height: 10px;
+            cursor: nwse-resize;
+            background: linear-gradient(135deg, transparent 50%, #0d6efd 50%);
+        }
         .builder-deployment-editor { border: 1px solid #dee2f7; border-radius: 10px; background: #f8f9ff; padding: 12px 16px; }
         .builder-deployment-editor summary { cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; color: #1f3a93; }
         .builder-deployment-editor summary::-webkit-details-marker { display: none; }
@@ -70,6 +235,568 @@
             .subsection-actions { flex-direction: column; gap: 10px; }
             .subsection-actions .btn { width: 100%; }
         }
+
+        /* Enhanced Features CSS */
+
+        /* Dark Mode Support */
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f7f9;
+            --bg-card: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #6c757d;
+            --border-color: #e9ecef;
+            --shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            --input-bg: #ffffff;
+            --input-border: #ced4da;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-card: #252525;
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --border-color: #3f3f46;
+            --shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            --input-bg: #2d2d2d;
+            --input-border: #3f3f46;
+        }
+
+        [data-theme="dark"] body {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .maker-container,
+        [data-theme="dark"] .card,
+        [data-theme="dark"] .accordion-item {
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select,
+        [data-theme="dark"] .editor-content {
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            border-color: var(--input-border);
+        }
+
+        [data-theme="dark"] .text-muted {
+            color: var(--text-secondary) !important;
+        }
+
+        [data-theme="dark"] .card-header {
+            background-color: #2d2d2d;
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .accordion-button {
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .modal-content {
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast-notification {
+            background: white;
+            border-radius: 8px;
+            padding: 16px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            max-width: 400px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        [data-theme="dark"] .toast-notification {
+            background: #2d2d2d;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .toast-notification.success { border-left: 4px solid #22c55e; }
+        .toast-notification.error { border-left: 4px solid #ef4444; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; }
+        .toast-notification.warning { border-left: 4px solid #f59e0b; }
+
+        .toast-notification .toast-icon {
+            font-size: 1.5rem;
+        }
+
+        .toast-notification.success .toast-icon { color: #22c55e; }
+        .toast-notification.error .toast-icon { color: #ef4444; }
+        .toast-notification.info .toast-icon { color: #3b82f6; }
+        .toast-notification.warning .toast-icon { color: #f59e0b; }
+
+        .toast-notification .toast-content {
+            flex: 1;
+        }
+
+        .toast-notification .toast-close {
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Progress Bar */
+        .completion-progress {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] .completion-progress {
+            background: var(--bg-card);
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 24px;
+            background: #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        [data-theme="dark"] .progress-bar-container {
+            background: #3f3f46;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0d6efd, #0dcaf0);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-weight: 600;
+            color: #0d6efd;
+        }
+
+        /* Header Toolbar */
+        .header-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        [data-theme="dark"] .header-toolbar {
+            background: var(--bg-card);
+        }
+
+        .header-toolbar-left,
+        .header-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .save-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .save-indicator i {
+            font-size: 0.6rem;
+        }
+
+        .save-indicator.saved i {
+            color: #22c55e;
+        }
+
+        .save-indicator.saving i {
+            color: #f59e0b;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Search Container */
+        .search-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] .search-container {
+            background: var(--bg-card);
+        }
+
+        .search-results {
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .search-result-item {
+            padding: 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-result-item:hover {
+            background: #f8f9fa;
+            border-color: #0d6efd;
+        }
+
+        [data-theme="dark"] .search-result-item {
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .search-result-item:hover {
+            background: #2d2d2d;
+        }
+
+        .search-result-item .result-title {
+            font-weight: 600;
+            color: #0d6efd;
+            margin-bottom: 4px;
+        }
+
+        .search-result-item .result-context {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        [data-theme="dark"] .highlight {
+            background: #856404;
+            color: #fff;
+        }
+
+        /* Modals */
+        .modal-lg {
+            max-width: 800px;
+        }
+
+        .template-item {
+            padding: 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .template-item:hover {
+            background: #f8f9fa;
+            border-color: #0d6efd;
+        }
+
+        [data-theme="dark"] .template-item {
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .template-item:hover {
+            background: #2d2d2d;
+        }
+
+        .template-info {
+            flex: 1;
+        }
+
+        .template-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .template-date {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .template-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .keyboard-shortcuts-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        [data-theme="dark"] .shortcut-item {
+            background: #2d2d2d;
+        }
+
+        .shortcut-key {
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        [data-theme="dark"] .shortcut-key {
+            background: #1a1a1a;
+            border-color: #3f3f46;
+        }
+
+        /* Validation Indicators */
+        .validation-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-left: 10px;
+        }
+
+        .validation-indicator.valid {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .validation-indicator.invalid {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .validation-indicator.partial {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        [data-theme="dark"] .validation-indicator.valid {
+            background: #065f46;
+            color: #d1fae5;
+        }
+
+        [data-theme="dark"] .validation-indicator.invalid {
+            background: #991b1b;
+            color: #fee2e2;
+        }
+
+        [data-theme="dark"] .validation-indicator.partial {
+            background: #92400e;
+            color: #fef3c7;
+        }
+
+        /* Section Management Styles */
+        .section-management-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: white;
+            transition: all 0.2s ease;
+            cursor: move;
+            cursor: grab;
+        }
+
+        .section-management-item:active {
+            cursor: grabbing;
+        }
+
+        .section-management-item.dragging {
+            opacity: 0.5;
+            background: #f0f0f0;
+            transform: scale(0.98);
+        }
+
+        .section-management-item.drag-over {
+            border-top: 3px solid #0d6efd;
+            border-radius: 8px 8px 0 0;
+        }
+
+        [data-theme="dark"] .section-management-item {
+            background: var(--bg-card);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .section-management-item.dragging {
+            background: #1a1a1a;
+        }
+
+        .section-management-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-management-item .drag-handle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 1.2rem;
+            cursor: grab;
+            padding: 5px;
+        }
+
+        .section-management-item .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .section-management-item .section-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0d6efd, #0dcaf0);
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .section-management-item .section-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .section-management-item .section-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            min-width: 150px;
+        }
+
+        .section-management-item .section-weight-edit {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-management-item .section-weight-edit input {
+            width: 80px;
+        }
+
+        .section-management-item .section-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .section-management-item.deletable {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        [data-theme="dark"] .section-management-item.deletable {
+            background: #3a1a1a;
+            border-color: #dc3545;
+        }
+
+        /* Modal for adding sections */
+        .modal-body .form-group {
+            margin-bottom: 15px;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 767.98px) {
+            .header-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .header-toolbar-left,
+            .header-toolbar-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .toast-container {
+                left: 10px;
+                right: 10px;
+            }
+
+            .toast-notification {
+                min-width: auto;
+            }
+
+            .keyboard-shortcuts-list {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -78,6 +805,56 @@
             <h2>🛠️ Advanced SCT Tool Builder</h2>
             <p class="text-muted">Customize every part of your tool. The generated HTML will be fully functional and match the original experience.</p>
             <p class="author-credit">Author by: <a href="mailto:joduzu@gmail.com">Jorge Durand Zurdo</a></p>
+        </div>
+
+        <!-- Toast Container -->
+        <div class="toast-container" id="toast-container" role="alert" aria-live="polite"></div>
+
+        <!-- Progress Bar -->
+        <div class="completion-progress" id="completion-progress" style="display: none;">
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-bar-fill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text" id="progress-text">0% Complete</div>
+        </div>
+
+        <!-- Header Toolbar -->
+        <div class="header-toolbar">
+            <div class="header-toolbar-left">
+                <button class="btn btn-sm btn-outline-secondary" id="btn-dark-mode" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <span class="save-indicator" id="save-indicator">
+                    <i class="fas fa-circle"></i>
+                    <span id="save-status">Not saved yet</span>
+                </span>
+            </div>
+            <div class="header-toolbar-right">
+                <button class="btn btn-sm btn-primary" id="btn-save-draft" aria-label="Save draft">
+                    <i class="fas fa-save me-1"></i>Save Draft
+                </button>
+                <button class="btn btn-sm btn-info" id="btn-export-config" aria-label="Export configuration to PDF">
+                    <i class="fas fa-file-pdf me-1"></i>Export Config
+                </button>
+                <button class="btn btn-sm btn-secondary" id="btn-templates" aria-label="Manage templates" data-bs-toggle="modal" data-bs-target="#templatesModal">
+                    <i class="fas fa-folder me-1"></i>Templates
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" id="btn-shortcuts" aria-label="Show keyboard shortcuts" data-bs-toggle="modal" data-bs-target="#shortcutsModal">
+                    <i class="fas fa-keyboard"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Search Container -->
+        <div class="search-container" id="search-container">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control" id="search-standards" placeholder="Search standards by name or content... (Ctrl+F)" aria-label="Search standards">
+                <button class="btn btn-outline-secondary" id="btn-clear-search" aria-label="Clear search">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="search-results" id="search-results"></div>
         </div>
 
         <div class="card my-4 deployment-modalities-card" id="deployment-modalities-card">
@@ -106,10 +883,79 @@
             </div>
         </div>
 
+        <div class="card my-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Section Management</h5>
+                <button class="btn btn-success btn-sm" id="btn-add-section"><i class="fas fa-plus me-2"></i>Create New Section</button>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">Create custom sections (e.g., CLINICAL, LOGISTICS, WASH) or delete existing ones. You can also update section weights on the fly.</p>
+                <div id="section-management-list" class="list-group"></div>
+            </div>
+        </div>
+
         <div class="accordion" id="sections-accordion"></div>
 
-        <div class="d-grid mt-4">
-            <button class="btn btn-primary btn-lg" id="btn-make"><i class="fas fa-magic me-2"></i>Generate Complete HTML Tool</button>
+        <div class="mt-4">
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary btn-lg" id="btn-make"><i class="fas fa-magic me-2"></i>Generate Complete HTML Tool</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-success flex-fill" id="btn-save-maker"><i class="fas fa-save me-2"></i>Save Maker State</button>
+                    <button class="btn btn-outline-info flex-fill" id="btn-load-maker"><i class="fas fa-upload me-2"></i>Load Maker State</button>
+                </div>
+            </div>
+            <p class="text-muted text-center mt-2 mb-0"><small>Save your maker configuration to continue editing later</small></p>
+        </div>
+    </div>
+
+    <!-- Hidden file input for loading maker state -->
+    <input type="file" id="maker-file-input" accept=".html" style="display: none;">
+
+    <!-- Modal for Adding New Section -->
+    <div class="modal fade" id="addSectionModal" tabindex="-1" aria-labelledby="addSectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addSectionModalLabel">Create New Section</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="new-section-key" class="form-label">Section Key (unique identifier)</label>
+                        <input type="text" class="form-control" id="new-section-key" placeholder="e.g., clinical-standards">
+                        <small class="text-muted">Use lowercase with hyphens (e.g., clinical-standards, wash-standards)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new-section-title" class="form-label">Section Title</label>
+                        <input type="text" class="form-control" id="new-section-title" placeholder="e.g., CLINICAL STANDARDS">
+                    </div>
+                    <div class="mb-3">
+                        <label for="new-section-icon" class="form-label">Icon (FontAwesome class)</label>
+                        <input type="text" class="form-control" id="new-section-icon" placeholder="e.g., fa-stethoscope">
+                        <small class="text-muted">Browse icons at <a href="https://fontawesome.com/icons" target="_blank">fontawesome.com</a></small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new-section-weight" class="form-label">Weight (%)</label>
+                        <input type="number" class="form-control" id="new-section-weight" value="0" min="0" max="100">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="new-section-has-subsections" checked>
+                            <label class="form-check-label" for="new-section-has-subsections">
+                                Has Subsections
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="subsections-input-container">
+                        <label for="new-section-subsections" class="form-label">Subsections (one per line)</label>
+                        <textarea class="form-control" id="new-section-subsections" rows="5" placeholder="Enter each subsection on a new line"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btn-create-section">Create Section</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -836,7 +1682,9 @@
     function splitStandardContent(html, fallbackIndex = 0, knownTitle = '') {
         const raw = String(html || '').trim();
         const fallbackTitle = `Standard ${fallbackIndex + 1}`;
-        const separators = [': ', ' – ', ' - ', ' — ', ':', '–', '-', '—'];
+        // Only use separators with spaces to avoid splitting words like "pre-deployment" or "context-based"
+        // Prioritize separators with spaces, then colons with spaces, and only use standalone dashes/colons as last resort
+        const separators = [': ', ' – ', ' — ', ' - ', ': ', '–', '—'];
         if (!raw) {
             const titleText = knownTitle || fallbackTitle;
             return { titleHTML: knownTitle || '', bodyHTML: '', titleText };
@@ -845,9 +1693,24 @@
         let titleHTML = raw;
         let bodyHTML = raw;
         let matched = false;
+
+        // Try to match separators, but skip if the match is within a word (for hyphens)
         for (const sep of separators) {
             const idx = raw.indexOf(sep);
             if (idx > -1) {
+                // For standalone hyphens without spaces, check if they're part of a compound word
+                if (sep === '-' || sep === '–' || sep === '—') {
+                    // Check if there are word characters immediately before and after (indicating a compound word)
+                    const charBefore = idx > 0 ? raw[idx - 1] : ' ';
+                    const charAfter = idx + sep.length < raw.length ? raw[idx + sep.length] : ' ';
+                    const isCompoundWord = /[a-zA-Z0-9]/.test(charBefore) && /[a-zA-Z0-9]/.test(charAfter);
+
+                    if (isCompoundWord) {
+                        // This is a compound word like "pre-deployment", skip it
+                        continue;
+                    }
+                }
+
                 titleHTML = raw.slice(0, idx);
                 bodyHTML = raw.slice(idx + sep.length).trim() || raw;
                 matched = true;
@@ -959,16 +1822,32 @@
         const parsedContent = splitStandardContent(subContent, index, options.titleText);
         const titleText = options.titleText || parsedContent.titleText || `Standard ${index + 1}`;
         ensureDeploymentOverride(sectionKey, itemKey, titleText);
+        const collapseId = `collapse-maker-${sectionKey}-${itemKey}`;
         const subsectionHTML = `
-            <div class="subsection-item" data-section="${sectionKey}" data-item-key="${itemKey}" data-default-index="${index}" data-title="${escapeHTML(titleText)}">
-                <div class="standard-name-group mb-2">
-                    <label class="form-label">Standard Name</label>
-                    <input type="text" class="form-control standard-title-input" data-section="${sectionKey}" data-item-key="${itemKey}" value="${escapeHTML(titleText)}" placeholder="Enter the standard title">
+            <div class="subsection-item" data-section="${sectionKey}" data-item-key="${itemKey}" data-default-index="${index}" data-title="${escapeHTML(titleText)}" draggable="true">
+                <div class="subsection-drag-handle" title="Drag to reorder">
+                    <i class="fas fa-grip-vertical"></i>
                 </div>
-                ${getEditorTemplate(parsedContent.bodyHTML)}
-                ${buildBuilderDeploymentEditor(sectionKey, itemKey, titleText)}
-                <div class="subsection-actions">
-                    <button class="btn btn-danger btn-sm remove-item" type="button"><i class="fas fa-trash"></i></button>
+                <div class="subsection-content-wrapper">
+                    <div class="subsection-collapse-header" data-bs-toggle="collapse" data-bs-target="#${collapseId}" role="button" aria-expanded="true">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <strong class="subsection-collapse-title">${escapeHTML(titleText)}</strong>
+                            <i class="fas fa-chevron-down collapse-toggle-icon"></i>
+                        </div>
+                    </div>
+                    <div id="${collapseId}" class="collapse show">
+                        <div class="subsection-collapse-body">
+                            <div class="standard-name-group mb-2">
+                                <label class="form-label">Standard Name</label>
+                                <input type="text" class="form-control standard-title-input" data-section="${sectionKey}" data-item-key="${itemKey}" value="${escapeHTML(titleText)}" placeholder="Enter the standard title">
+                            </div>
+                            ${getEditorTemplate(parsedContent.bodyHTML)}
+                            ${buildBuilderDeploymentEditor(sectionKey, itemKey, titleText)}
+                            <div class="subsection-actions">
+                                <button class="btn btn-danger btn-sm remove-item" type="button"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -976,6 +1855,7 @@
         const newItem = container.lastElementChild;
         setupRichTextEditors(newItem);
         setupDeploymentPrefillEditors(newItem);
+        setupSubsectionDragAndDrop(newItem);
         updateBuilderModalityEditorsVisibility();
         const titleInput = newItem.querySelector('.standard-title-input');
         if (titleInput) {
@@ -986,6 +1866,13 @@
                     : `Standard ${index + 1}`;
                 const value = titleInput.value.trim() || fallbackTitle;
                 newItem.dataset.title = value;
+
+                // Update collapse header title
+                const collapseTitle = newItem.querySelector('.subsection-collapse-title');
+                if (collapseTitle) {
+                    collapseTitle.textContent = value;
+                }
+
                 const details = newItem.querySelector('.builder-deployment-editor');
                 if (details) {
                     details.dataset.title = value;
@@ -1153,6 +2040,8 @@
                     <button type="button" class="btn btn-outline-secondary btn-sm format-btn" data-command="underline" title="Underline"><i class="fas fa-underline"></i></button>
                     <button type="button" class="btn btn-outline-secondary btn-sm format-btn" data-command="insertUnorderedList" title="Bulleted list"><i class="fas fa-list-ul"></i></button>
                     <button type="button" class="btn btn-outline-secondary btn-sm format-btn" data-command="insertOrderedList" title="Numbered list"><i class="fas fa-list-ol"></i></button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm insert-link-btn" title="Insert hyperlink"><i class="fas fa-link"></i></button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm insert-table-btn" title="Insert table"><i class="fas fa-table"></i></button>
                     <button type="button" class="btn btn-outline-secondary btn-sm format-btn" data-command="removeFormat" title="Clear formatting"><i class="fas fa-eraser"></i></button>
                 </div>
                 <div class="editor-content form-control" contenteditable="true" data-placeholder="${placeholder}">${content}</div>
@@ -1304,7 +2193,14 @@
 
             let sectionBody = '';
             if (config.hasSubsections) {
-                sectionBody = `<h5>Standards / Subsections (HTML allowed)</h5>
+                sectionBody = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">Standards / Subsections (HTML allowed)</h5>
+                    <div>
+                        <button class="btn btn-outline-secondary btn-sm collapse-all-standards" data-section="${key}" title="Collapse all"><i class="fas fa-compress-alt me-1"></i>Collapse All</button>
+                        <button class="btn btn-outline-secondary btn-sm expand-all-standards" data-section="${key}" title="Expand all"><i class="fas fa-expand-alt me-1"></i>Expand All</button>
+                    </div>
+                </div>
                 <div id="subsections-${key}" class="subsections-container"></div>
                 <button class="btn btn-outline-success mt-2 add-item" data-section="${key}"><i class="fas fa-plus me-2"></i>Add Standard</button>`;
             } else if (config.editableContent) {
@@ -1373,7 +2269,334 @@
             }
         }
     }
-    
+
+    // Section Management Functions
+    function renderSectionManagementList() {
+        const listContainer = document.getElementById('section-management-list');
+        if (!listContainer) return;
+
+        listContainer.innerHTML = '';
+
+        Object.entries(TOOL_CONFIG).forEach(([key, config]) => {
+            if (config.weight > 0) { // Only show sections with weights
+                const itemHTML = `
+                    <div class="section-management-item" data-section-key="${key}" draggable="true">
+                        <div class="drag-handle" title="Drag to reorder">
+                            <i class="fas fa-grip-vertical"></i>
+                        </div>
+                        <div class="section-icon">
+                            <i class="fas ${config.icon}"></i>
+                        </div>
+                        <div class="section-info">
+                            <span class="section-name">${config.title}</span>
+                            <div class="section-weight-edit">
+                                <label class="form-label mb-0 me-2">Weight:</label>
+                                <input type="number" class="form-control form-control-sm inline-weight-input"
+                                    data-section-key="${key}" value="${config.weight}" min="0" max="100">
+                                <span class="ms-1">%</span>
+                            </div>
+                        </div>
+                        <div class="section-actions">
+                            <button class="btn btn-sm btn-outline-primary edit-section-btn" data-section-key="${key}" title="Edit Section">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-section-btn" data-section-key="${key}" title="Delete Section">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', itemHTML);
+            }
+        });
+
+        // Add event listeners for inline weight editing
+        document.querySelectorAll('.inline-weight-input').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const sectionKey = e.target.dataset.sectionKey;
+                const newWeight = parseInt(e.target.value) || 0;
+
+                // Update TOOL_CONFIG
+                if (TOOL_CONFIG[sectionKey]) {
+                    TOOL_CONFIG[sectionKey].weight = newWeight;
+                }
+
+                // Update the weight input in the weights container
+                const weightInput = document.querySelector(`.weight-input[data-key="${sectionKey}"]`);
+                if (weightInput) {
+                    weightInput.value = newWeight;
+                }
+
+                updateWeightSum();
+            });
+        });
+
+        // Add event listeners for delete buttons
+        document.querySelectorAll('.delete-section-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const sectionKey = e.currentTarget.dataset.sectionKey;
+                deleteSection(sectionKey);
+            });
+        });
+
+        // Add drag-and-drop event listeners
+        setupDragAndDrop();
+    }
+
+    let draggedElement = null;
+
+    function setupDragAndDrop() {
+        const items = document.querySelectorAll('.section-management-item');
+
+        items.forEach(item => {
+            item.addEventListener('dragstart', handleDragStart);
+            item.addEventListener('dragend', handleDragEnd);
+            item.addEventListener('dragover', handleDragOver);
+            item.addEventListener('drop', handleDrop);
+            item.addEventListener('dragleave', handleDragLeave);
+        });
+    }
+
+    function handleDragStart(e) {
+        draggedElement = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+    }
+
+    function handleDragEnd(e) {
+        this.classList.remove('dragging');
+
+        // Remove all drag-over classes
+        document.querySelectorAll('.section-management-item').forEach(item => {
+            item.classList.remove('drag-over');
+        });
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+
+        e.dataTransfer.dropEffect = 'move';
+
+        if (this !== draggedElement) {
+            this.classList.add('drag-over');
+        }
+
+        return false;
+    }
+
+    function handleDragLeave(e) {
+        this.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+
+        if (draggedElement !== this) {
+            // Get the section keys
+            const draggedKey = draggedElement.dataset.sectionKey;
+            const targetKey = this.dataset.sectionKey;
+
+            // Reorder sections in TOOL_CONFIG
+            reorderSections(draggedKey, targetKey);
+
+            // Re-render both section management list and main UI
+            renderSectionManagementList();
+            renderMakerUI();
+        }
+
+        return false;
+    }
+
+    function reorderSections(draggedKey, targetKey) {
+        // Get all section keys in current order
+        const keys = Object.keys(TOOL_CONFIG);
+
+        // Find indices
+        const draggedIndex = keys.indexOf(draggedKey);
+        const targetIndex = keys.indexOf(targetKey);
+
+        if (draggedIndex === -1 || targetIndex === -1) return;
+
+        // Remove dragged item and insert before target
+        keys.splice(draggedIndex, 1);
+        const newTargetIndex = keys.indexOf(targetKey);
+        keys.splice(newTargetIndex, 0, draggedKey);
+
+        // Recreate TOOL_CONFIG in new order
+        const newConfig = {};
+        keys.forEach(key => {
+            newConfig[key] = TOOL_CONFIG[key];
+        });
+
+        // Replace TOOL_CONFIG
+        Object.keys(TOOL_CONFIG).forEach(key => delete TOOL_CONFIG[key]);
+        Object.assign(TOOL_CONFIG, newConfig);
+    }
+
+    // Drag and drop for subsection items (standards within sections)
+    let draggedSubsection = null;
+
+    function setupSubsectionDragAndDrop(item) {
+        item.addEventListener('dragstart', function(e) {
+            draggedSubsection = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        });
+
+        item.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.subsection-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+        });
+
+        item.addEventListener('dragover', function(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+
+            // Only allow drop if same section
+            if (draggedSubsection && this !== draggedSubsection) {
+                const draggedSection = draggedSubsection.dataset.section;
+                const targetSection = this.dataset.section;
+
+                if (draggedSection === targetSection) {
+                    this.classList.add('drag-over');
+                }
+            }
+
+            return false;
+        });
+
+        item.addEventListener('dragleave', function(e) {
+            this.classList.remove('drag-over');
+        });
+
+        item.addEventListener('drop', function(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            if (draggedSubsection && draggedSubsection !== this) {
+                const draggedSection = draggedSubsection.dataset.section;
+                const targetSection = this.dataset.section;
+
+                // Only reorder if within same section
+                if (draggedSection === targetSection) {
+                    const container = this.parentNode;
+                    const allItems = Array.from(container.querySelectorAll('.subsection-item'));
+                    const draggedIndex = allItems.indexOf(draggedSubsection);
+                    const targetIndex = allItems.indexOf(this);
+
+                    if (draggedIndex < targetIndex) {
+                        // Insert after target
+                        this.parentNode.insertBefore(draggedSubsection, this.nextSibling);
+                    } else {
+                        // Insert before target
+                        this.parentNode.insertBefore(draggedSubsection, this);
+                    }
+
+                    // Update data-default-index for all items in this section
+                    const updatedItems = Array.from(container.querySelectorAll('.subsection-item'));
+                    updatedItems.forEach((item, index) => {
+                        item.dataset.defaultIndex = index;
+                    });
+                }
+            }
+
+            return false;
+        });
+    }
+
+    function deleteSection(sectionKey) {
+        if (!TOOL_CONFIG[sectionKey]) return;
+
+        if (!confirm(`Are you sure you want to delete the section "${TOOL_CONFIG[sectionKey].title}"?`)) {
+            return;
+        }
+
+        // Remove from TOOL_CONFIG
+        delete TOOL_CONFIG[sectionKey];
+
+        // Remove from UI
+        const accordionItem = document.getElementById(`accordion-item-${sectionKey}`);
+        if (accordionItem) accordionItem.remove();
+
+        const weightDiv = document.getElementById(`weight-div-${sectionKey}`);
+        if (weightDiv) weightDiv.remove();
+
+        // Re-render section management list and update weight sum
+        renderSectionManagementList();
+        updateWeightSum();
+    }
+
+    function createNewSection() {
+        const key = document.getElementById('new-section-key').value.trim();
+        const title = document.getElementById('new-section-title').value.trim();
+        const icon = document.getElementById('new-section-icon').value.trim();
+        const weight = parseInt(document.getElementById('new-section-weight').value) || 0;
+        const hasSubsections = document.getElementById('new-section-has-subsections').checked;
+        const subsectionsText = document.getElementById('new-section-subsections').value.trim();
+
+        // Validation
+        if (!key) {
+            alert('Please enter a section key');
+            return;
+        }
+
+        if (TOOL_CONFIG[key]) {
+            alert('A section with this key already exists. Please use a unique key.');
+            return;
+        }
+
+        if (!title) {
+            alert('Please enter a section title');
+            return;
+        }
+
+        // Parse subsections
+        let subsections = [];
+        if (hasSubsections && subsectionsText) {
+            subsections = subsectionsText.split('\n').filter(line => line.trim() !== '');
+        }
+
+        // Create new section config
+        const newSection = {
+            title: title,
+            icon: icon || 'fa-cog',
+            hasSubsections: hasSubsections,
+            weight: weight,
+            enabled: true,
+            subsections: hasSubsections ? subsections : undefined,
+            editableContent: !hasSubsections
+        };
+
+        // Add to TOOL_CONFIG
+        TOOL_CONFIG[key] = newSection;
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addSectionModal'));
+        modal.hide();
+
+        // Clear form
+        document.getElementById('new-section-key').value = '';
+        document.getElementById('new-section-title').value = '';
+        document.getElementById('new-section-icon').value = '';
+        document.getElementById('new-section-weight').value = '0';
+        document.getElementById('new-section-subsections').value = '';
+
+        // Re-render UI
+        renderMakerUI();
+        renderSectionManagementList();
+    }
+
     function addEventListeners() {
         document.querySelectorAll('.add-item').forEach(btn => btn.onclick = e => {
             const section = e.currentTarget.dataset.section;
@@ -1388,6 +2611,58 @@
             updateWeightSum();
         });
         document.getElementById('btn-make').onclick = generateHTML;
+
+        // Collapse/Expand all standards buttons
+        document.querySelectorAll('.collapse-all-standards').forEach(btn => {
+            btn.onclick = (e) => {
+                const section = e.currentTarget.dataset.section;
+                const container = document.getElementById(`subsections-${section}`);
+                if (container) {
+                    const collapses = container.querySelectorAll('.collapse');
+                    collapses.forEach(collapse => {
+                        const bsCollapse = bootstrap.Collapse.getInstance(collapse) || new bootstrap.Collapse(collapse, { toggle: false });
+                        bsCollapse.hide();
+                    });
+                }
+            };
+        });
+
+        document.querySelectorAll('.expand-all-standards').forEach(btn => {
+            btn.onclick = (e) => {
+                const section = e.currentTarget.dataset.section;
+                const container = document.getElementById(`subsections-${section}`);
+                if (container) {
+                    const collapses = container.querySelectorAll('.collapse');
+                    collapses.forEach(collapse => {
+                        const bsCollapse = bootstrap.Collapse.getInstance(collapse) || new bootstrap.Collapse(collapse, { toggle: false });
+                        bsCollapse.show();
+                    });
+                }
+            };
+        });
+
+        // Section Management Event Listeners
+        const btnAddSection = document.getElementById('btn-add-section');
+        if (btnAddSection) {
+            btnAddSection.onclick = () => {
+                const modal = new bootstrap.Modal(document.getElementById('addSectionModal'));
+                modal.show();
+            };
+        }
+
+        const btnCreateSection = document.getElementById('btn-create-section');
+        if (btnCreateSection) {
+            btnCreateSection.onclick = createNewSection;
+        }
+
+        // Toggle subsections input based on checkbox
+        const hasSubsectionsCheckbox = document.getElementById('new-section-has-subsections');
+        if (hasSubsectionsCheckbox) {
+            hasSubsectionsCheckbox.addEventListener('change', (e) => {
+                const subsectionsContainer = document.getElementById('subsections-input-container');
+                subsectionsContainer.style.display = e.target.checked ? 'block' : 'none';
+            });
+        }
     }
 
     function setupRichTextEditors(root = document) {
@@ -1458,6 +2733,228 @@
                 storeSelection(editor);
             });
         });
+
+        // Handle table insertion
+        root.querySelectorAll('.insert-table-btn').forEach(btn => {
+            if (btn.dataset.tableHandlerAttached === 'true') {
+                return;
+            }
+            btn.dataset.tableHandlerAttached = 'true';
+
+            btn.addEventListener('click', e => {
+                e.preventDefault();
+                const container = btn.closest('.subsection-item') || btn.closest('.section-content-editor') || btn.closest('.rich-text-editor');
+                const editor = container ? container.querySelector('.editor-content') : null;
+                if (!editor) {
+                    return;
+                }
+
+                // Prompt for table dimensions
+                const rows = prompt('Number of rows:', '3');
+                const cols = prompt('Number of columns:', '3');
+
+                if (!rows || !cols || isNaN(rows) || isNaN(cols)) {
+                    return;
+                }
+
+                const numRows = parseInt(rows);
+                const numCols = parseInt(cols);
+
+                if (numRows < 1 || numCols < 1 || numRows > 20 || numCols > 10) {
+                    alert('Please enter valid dimensions (rows: 1-20, columns: 1-10)');
+                    return;
+                }
+
+                // Create table element programmatically
+                const table = document.createElement('table');
+                table.className = 'resizable';
+                table.style.width = 'auto';
+
+                const tbody = document.createElement('tbody');
+
+                // Add header row
+                const headerRow = document.createElement('tr');
+                for (let c = 0; c < numCols; c++) {
+                    const th = document.createElement('th');
+                    th.contentEditable = 'true';
+                    th.textContent = `Header ${c + 1}`;
+                    headerRow.appendChild(th);
+                }
+                tbody.appendChild(headerRow);
+
+                // Add data rows
+                for (let r = 0; r < numRows - 1; r++) {
+                    const row = document.createElement('tr');
+                    for (let c = 0; c < numCols; c++) {
+                        const td = document.createElement('td');
+                        td.contentEditable = 'true';
+                        td.textContent = 'Cell';
+                        row.appendChild(td);
+                    }
+                    tbody.appendChild(row);
+                }
+
+                table.appendChild(tbody);
+
+                // Insert table at cursor
+                editor.focus();
+                if (activeEditor !== editor) {
+                    activeEditor = editor;
+                }
+                restoreSelection(editor);
+
+                // Use range to insert the table
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    range.deleteContents();
+                    range.insertNode(table);
+
+                    // Add a paragraph after the table
+                    const p = document.createElement('p');
+                    p.innerHTML = '<br>';
+                    range.collapse(false);
+                    range.insertNode(p);
+
+                    // Move cursor to the new paragraph
+                    range.setStart(p, 0);
+                    range.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+
+                editor._updatePlaceholder?.();
+                storeSelection(editor);
+
+                // Make table resizable
+                makeTablesResizable(editor);
+            });
+        });
+
+        // Handle hyperlink insertion
+        root.querySelectorAll('.insert-link-btn').forEach(btn => {
+            if (btn.dataset.linkHandlerAttached === 'true') {
+                return;
+            }
+            btn.dataset.linkHandlerAttached = 'true';
+
+            btn.addEventListener('click', e => {
+                e.preventDefault();
+                const container = btn.closest('.subsection-item') || btn.closest('.section-content-editor') || btn.closest('.rich-text-editor');
+                const editor = container ? container.querySelector('.editor-content') : null;
+                if (!editor) {
+                    return;
+                }
+
+                editor.focus();
+                if (activeEditor !== editor) {
+                    activeEditor = editor;
+                }
+                restoreSelection(editor);
+
+                const selection = window.getSelection();
+                let selectedText = '';
+                let existingLink = null;
+
+                // Check if we're clicking on an existing link
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    let node = range.commonAncestorContainer;
+
+                    // Find if we're inside a link
+                    while (node && node !== editor) {
+                        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'A') {
+                            existingLink = node;
+                            break;
+                        }
+                        node = node.parentNode;
+                    }
+
+                    selectedText = selection.toString();
+                }
+
+                // If editing existing link
+                if (existingLink) {
+                    const currentUrl = existingLink.href;
+                    const currentText = existingLink.textContent;
+
+                    const action = confirm('Do you want to edit this link? Click OK to edit, Cancel to remove.');
+
+                    if (action) {
+                        // Edit link
+                        const newUrl = prompt('Enter URL:', currentUrl);
+                        if (newUrl !== null && newUrl.trim()) {
+                            existingLink.href = newUrl.trim();
+                            showToast('Link updated', 'success');
+                        }
+                    } else {
+                        // Remove link
+                        const text = document.createTextNode(existingLink.textContent);
+                        existingLink.parentNode.replaceChild(text, existingLink);
+                        showToast('Link removed', 'info');
+                    }
+
+                    editor._updatePlaceholder?.();
+                    storeSelection(editor);
+                    return;
+                }
+
+                // Insert new link
+                const url = prompt('Enter URL:', 'https://');
+                if (!url || !url.trim() || url === 'https://') {
+                    return;
+                }
+
+                const linkText = selectedText || prompt('Enter link text:', url);
+                if (!linkText) {
+                    return;
+                }
+
+                // Create the link
+                const link = document.createElement('a');
+                link.href = url.trim();
+                link.textContent = linkText;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+
+                // Insert the link
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    range.deleteContents();
+                    range.insertNode(link);
+
+                    // Add a space after the link
+                    const space = document.createTextNode(' ');
+                    range.collapse(false);
+                    range.insertNode(space);
+
+                    // Move cursor after the space
+                    range.setStartAfter(space);
+                    range.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+
+                editor._updatePlaceholder?.();
+                storeSelection(editor);
+                showToast('Link inserted', 'success');
+            });
+        });
+    }
+
+    function makeTablesResizable(editor) {
+        const tables = editor.querySelectorAll('table.resizable');
+        tables.forEach(table => {
+            if (table.dataset.resizableInitialized === 'true') {
+                return;
+            }
+            table.dataset.resizableInitialized = 'true';
+
+            // Make table manually resizable
+            table.style.resize = 'both';
+            table.style.overflow = 'auto';
+            table.style.display = 'inline-table';
+        });
     }
 
     function updateWeightSum() {
@@ -1471,6 +2968,8 @@
     function generateHTML() {
         // 1. Gather all customizations from the maker UI
         const finalConfig = {};
+        const debugInfo = { sections: {}, modalities: [] };
+
         document.querySelectorAll('.section-title-input').forEach(input => {
             const key = input.dataset.key;
             finalConfig[key] = {
@@ -1483,6 +2982,13 @@
                     return parseInt(value || '0', 10);
                 })()
             };
+
+            debugInfo.sections[key] = {
+                title: finalConfig[key].title,
+                enabled: finalConfig[key].enabled,
+                hasSubsections: finalConfig[key].hasSubsections
+            };
+
             if (finalConfig[key].hasSubsections) {
                 const items = Array.from(document.querySelectorAll(`#subsections-${key} .subsection-item`));
                 finalConfig[key].subsections = items.map((item, index) => {
@@ -1511,23 +3017,45 @@
                         details.dataset.title = titleText;
                     }
                     ensureDeploymentOverride(key, itemKey, titleText);
+
+                    console.log(`Captured subsection ${key}[${index}]:`, {
+                        titleText,
+                        contentLength: content.length,
+                        contentPreview: content.substring(0, 100)
+                    });
+
                     return { content, itemKey, titleText };
                 });
+
+                debugInfo.sections[key].subsectionCount = finalConfig[key].subsections.length;
             }
             if (finalConfig[key].editableContent) {
                 const editor = document.querySelector(`#accordion-item-${key} .section-content-editor .editor-content`);
-                finalConfig[key].content = editor ? editor.innerHTML.trim() : '';
+                const content = editor ? editor.innerHTML.trim() : '';
+                finalConfig[key].content = content;
+
+                console.log(`Captured editable content for ${key}:`, {
+                    contentLength: content.length,
+                    contentPreview: content.substring(0, 100)
+                });
             }
         });
 
         const selectedModalities = Array.from(document.querySelectorAll('.deployment-modality-checkbox'))
             .filter(cb => cb.checked)
             .map(cb => cb.dataset.key);
+
+        debugInfo.modalities = selectedModalities;
+        console.log('Selected deployment modalities:', selectedModalities);
+
         const sctNameField = document.getElementById('sctName');
         const rawSctName = sctNameField ? sctNameField.value.trim() : '';
         const headingText = rawSctName
             ? (rawSctName.toLowerCase().endsWith('sct tool') ? rawSctName : rawSctName + ' SCT Tool')
             : 'HID SCT Tool';
+
+        console.log('SCT Name:', rawSctName, '-> Heading:', headingText);
+
         const deploymentModalitiesCardHTML = buildDeploymentModalitiesCardHTML(selectedModalities, rawSctName);
         const deploymentModalityDetailsHTML = buildDeploymentModalityDetailsHTML(selectedModalities);
         const deploymentSummaryBannerHTML = buildDeploymentSummaryBannerHTML(selectedModalities, headingText);
@@ -1535,6 +3063,9 @@
         DEPLOYMENT_MODALITIES.forEach(modality => {
             defaultModalityState[modality.key] = selectedModalities.includes(modality.key);
         });
+
+        console.log('Default Modality State for generated tool:', defaultModalityState);
+        console.log('Full debug info:', debugInfo);
 
         const enabledSections = Object.entries(finalConfig).filter(([, config]) => config.enabled);
 
@@ -1637,42 +3168,50 @@
             return `
                 <div class="compliance-card" data-section="${key}" data-item="${subId}">
                     <div class="card-inner">
-                        <div class="card-header">
-                            <h5 class="subsection-title">${safeTitle}</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="card-description">${parsed.bodyHTML}</div>
-                            ${deploymentBlock}
-                            <div class="card-fields">
-                                <div class="field-group">
-                                    <label>Describe evidence</label>
-                                    <textarea class="form-control evidence-input" data-section="${key}" data-item="${subId}" rows="3"></textarea>
-                                        </div>
-                                        <div class="field-group">
-                                            <label>Gaps</label>
-                                            <textarea class="form-control gaps-input" data-section="${key}" data-item="${subId}" rows="3"></textarea>
-                                        </div>
-                                        <div class="field-group">
-                                            <label>Actions</label>
-                                            <textarea class="form-control action-input" data-section="${key}" data-item="${subId}" rows="3"></textarea>
-                                        </div>
-                                    </div>
+                        <div class="card-header" data-bs-toggle="collapse" data-bs-target="#collapse-${key}-${subId}" role="button" aria-expanded="false">
+                            <div class="d-flex justify-content-between align-items-center w-100">
+                                <h5 class="subsection-title mb-0">${safeTitle}</h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="score-badge" data-score="0">Not Started</span>
+                                    <i class="fas fa-chevron-down collapse-icon"></i>
                                 </div>
-                                <div class="card-footer">
-                                    <div class="score-select-wrapper">
-                                        <label>Compliance score</label>
-                                        <select class="form-select score-select compliance-score" data-section="${key}" data-item="${subId}">
-                                            <option value="">-</option>
-                                            <option value="0" selected>0 - Not started</option>
-                                            <option value="1">1 - Initial</option>
-                                            <option value="2">2 - In progress</option>
-                                            <option value="3">3 - Completed</option>
-                                            <option value="NA">N/A</option>
-                                        </select>
+                            </div>
+                        </div>
+                        <div id="collapse-${key}-${subId}" class="collapse">
+                            <div class="card-body">
+                                <div class="card-description">${parsed.bodyHTML}</div>
+                                ${deploymentBlock}
+                                <div class="card-fields">
+                                    <div class="field-group">
+                                        <label>Describe evidence</label>
+                                        <textarea class="form-control evidence-input" data-section="${key}" data-item="${subId}" rows="3"></textarea>
+                                    </div>
+                                    <div class="field-group">
+                                        <label>Gaps</label>
+                                        <textarea class="form-control gaps-input" data-section="${key}" data-item="${subId}" rows="3"></textarea>
+                                    </div>
+                                    <div class="field-group">
+                                        <label>Actions</label>
+                                        <textarea class="form-control action-input" data-section="${key}" data-item="${subId}" rows="3"></textarea>
                                     </div>
                                 </div>
                             </div>
-                        </div>`;
+                            <div class="card-footer">
+                                <div class="score-select-wrapper">
+                                    <label>Compliance score</label>
+                                    <select class="form-select score-select compliance-score" data-section="${key}" data-item="${subId}">
+                                        <option value="">-</option>
+                                        <option value="0" selected>0 - Not started</option>
+                                        <option value="1">1 - Initial</option>
+                                        <option value="2">2 - In progress</option>
+                                        <option value="3">3 - Completed</option>
+                                        <option value="NA">N/A</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
                 }).join('');
 
                 content = `
@@ -2513,6 +4052,92 @@
             background: linear-gradient(90deg, #eef2ff 0%, #f7f9ff 100%);
             padding: 1.1rem 1.5rem;
             border-bottom: 1px solid #dbe4ff;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .compliance-card .card-header:hover {
+            background: linear-gradient(90deg, #e0e7ff 0%, #eef2ff 100%);
+        }
+
+        .compliance-card .card-header[aria-expanded="true"] {
+            background: linear-gradient(90deg, #4f46e5 0%, #6366f1 100%);
+        }
+
+        .compliance-card .card-header[aria-expanded="true"] .subsection-title,
+        .compliance-card .card-header[aria-expanded="true"] .collapse-icon {
+            color: white !important;
+        }
+
+        .collapse-icon {
+            transition: transform 0.2s ease;
+            color: #4338ca;
+        }
+
+        .card-header[aria-expanded="true"] .collapse-icon {
+            transform: rotate(180deg);
+        }
+
+        .score-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+
+        .score-badge[data-score="0"],
+        .score-badge[data-score=""] {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .score-badge[data-score="1"] {
+            background: #fed7aa;
+            color: #9a3412;
+        }
+
+        .score-badge[data-score="2"] {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .score-badge[data-score="3"] {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .score-badge[data-score="NA"] {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        /* Color code card headers based on score */
+        .compliance-card[data-score="0"] .card-header:not([aria-expanded="true"]),
+        .compliance-card[data-score=""] .card-header:not([aria-expanded="true"]) {
+            background: linear-gradient(90deg, #fee2e2 0%, #fecaca 100%);
+            border-bottom-color: #fca5a5;
+        }
+
+        .compliance-card[data-score="1"] .card-header:not([aria-expanded="true"]) {
+            background: linear-gradient(90deg, #fed7aa 0%, #fdba74 100%);
+            border-bottom-color: #fb923c;
+        }
+
+        .compliance-card[data-score="2"] .card-header:not([aria-expanded="true"]) {
+            background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+            border-bottom-color: #fcd34d;
+        }
+
+        .compliance-card[data-score="3"] .card-header:not([aria-expanded="true"]) {
+            background: linear-gradient(90deg, #d1fae5 0%, #a7f3d0 100%);
+            border-bottom-color: #6ee7b7;
+        }
+
+        .compliance-card[data-score="NA"] .card-header:not([aria-expanded="true"]) {
+            background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 100%);
+            border-bottom-color: #d1d5db;
         }
 
         .subsection-title {
@@ -2848,7 +4473,7 @@
 <body>
     <div class="app-container"><div class="row g-0">
         <div class="col-lg-2"><div class="sidebar"><h4 class="text-center mb-4" id="sidebarSctTitle">${escapeHTML(headingText)}</h4><ul class="nav flex-column">${sidebarLinks}</ul><div class="mt-4 p-3"><div class="progress-bar-container"><div class="progress-bar bg-success" id="overallProgressBar" style="width:0%"></div></div><p class="mb-1">Overall Completion</p><h5 class="text-center" id="overallProgressText">0%</h5></div></div></div>
-        <div class="col-lg-8"><div class="main-content"><div class="author-credit">Author by: <a href="mailto:joduzu@gmail.com">Jorge Durand Zurdo</a></div>${deploymentSummaryBannerHTML}<div class="tab-content">${tabPanes}</div><div class="d-flex justify-content-between mt-4"><div><button class="btn btn-outline-secondary" id="btn-import-excel"><i class="fas fa-upload me-2"></i>Import Excel</button><button class="btn btn-outline-secondary" id="btn-export-json"><i class="fas fa-download me-2"></i>Export JSON</button></div><div><button class="btn btn-outline-primary me-2" id="btn-save"><i class="fas fa-save me-2"></i>Save Draft</button><button class="btn btn-outline-info me-2" id="btn-export-excel"><i class="fas fa-file-excel me-2"></i>Export to Excel</button><button class="btn btn-success" id="btn-submit"><i class="fas fa-check-circle me-2"></i>Submit Assessment</button></div></div><div class="text-end mt-3"><button class="btn btn-report" id="btn-generate-pdf"><i class="fas fa-file-pdf me-2"></i>Generate PDF Report</button></div></div></div>
+        <div class="col-lg-8"><div class="main-content"><div class="author-credit">Author by: <a href="mailto:joduzu@gmail.com">Jorge Durand Zurdo</a></div>${deploymentSummaryBannerHTML}<div class="tab-content">${tabPanes}</div><div class="d-flex justify-content-between mt-4"><div><button class="btn btn-outline-secondary" id="btn-import-excel"><i class="fas fa-upload me-2"></i>Import Excel</button><button class="btn btn-outline-secondary" id="btn-export-json"><i class="fas fa-download me-2"></i>Export JSON</button><button class="btn btn-outline-warning btn-sm" id="btn-save-html" title="Save this tool with all your data as HTML"><i class="fas fa-file-code me-2"></i>Save as HTML</button><button class="btn btn-outline-danger btn-sm" id="btn-clear-data" title="Clear all saved data and reset to defaults"><i class="fas fa-trash me-2"></i>Clear Data</button></div><div><button class="btn btn-outline-primary me-2" id="btn-save"><i class="fas fa-save me-2"></i>Save Draft</button><button class="btn btn-outline-info me-2" id="btn-export-excel"><i class="fas fa-file-excel me-2"></i>Export to Excel</button><button class="btn btn-success" id="btn-submit"><i class="fas fa-check-circle me-2"></i>Submit Assessment</button></div></div><div class="text-end mt-3"><button class="btn btn-report" id="btn-generate-pdf"><i class="fas fa-file-pdf me-2"></i>Generate PDF Report</button></div></div></div>
         <div class="col-lg-2"><div class="progress-sidebar"><h5 class="mb-3">Progress Overview</h5><div class="progress-bar-container mb-3"><div class="progress-bar bg-success" id="sidebarProgressBar" style="width:0%"></div></div><p class="mb-1">Overall Completion</p><h5 class="text-center mb-4" id="sidebarProgressText">0%</h5><table class="progress-sidebar-table"><thead><tr><th>Section</th><th>Status</th><th>%</th></tr></thead><tbody id="progressSidebarBody"></tbody></table></div></div>
     </div></div>
     <input type="file" id="fileInput" class="file-input" accept=".xlsx, .xls">
@@ -3282,6 +4907,29 @@
         select.className = 'form-select score-select compliance-score';
         if (value !== '' && value !== 'NA') {
             select.classList.add('score-' + value);
+        }
+
+        // Update the score badge in the card header
+        const card = select.closest('.compliance-card');
+        if (card) {
+            const badge = card.querySelector('.score-badge');
+            if (badge) {
+                badge.dataset.score = value || '0';
+
+                // Update badge text
+                const scoreLabels = {
+                    '': 'Not Started',
+                    '0': 'Not Started',
+                    '1': 'Initial',
+                    '2': 'In Progress',
+                    '3': 'Completed',
+                    'NA': 'N/A'
+                };
+                badge.textContent = scoreLabels[value] || 'Not Started';
+            }
+
+            // Update card data attribute for CSS styling
+            card.dataset.score = value || '0';
         }
     }
     function updateProgress(){
@@ -3931,6 +5579,50 @@
 
         document.getElementById("fileInput").addEventListener("change", importFromExcel);
 
+        document.getElementById("btn-clear-data").addEventListener("click", () => {
+            if (confirm('Are you sure you want to clear all saved data? This will reset the tool to its initial state with default values.')) {
+                try {
+                    localStorage.removeItem('hidSCTAssessment');
+                    showNotification('All data cleared successfully. Page will reload.', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } catch (error) {
+                    console.error('Error clearing data:', error);
+                    showNotification('Error clearing data: ' + error.message, 'error');
+                }
+            }
+        });
+
+        document.getElementById("btn-save-html").addEventListener("click", () => {
+            try {
+                // Save current progress first
+                saveProgress();
+
+                // Get the current HTML
+                const currentHTML = document.documentElement.outerHTML;
+
+                // Create a blob and download
+                const blob = new Blob(['<!DOCTYPE html>\\n' + currentHTML], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+                const sctName = assessmentData.teamInfo?.sctName || 'assessment';
+                const fileName = \`\${sctName.replace(/[^a-z0-9]/gi, '-')}-tool-\${timestamp}.html\`;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                showNotification('Tool saved as HTML successfully!', 'success');
+            } catch (error) {
+                console.error('Error saving HTML:', error);
+                showNotification('Error saving HTML: ' + error.message, 'error');
+            }
+        });
+
         const navLinks = document.querySelectorAll('.nav-link[data-bs-toggle="tab"]');
         navLinks.forEach(link => {
             link.addEventListener("click", function (event) {
@@ -3957,14 +5649,965 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
-    
-    document.addEventListener('DOMContentLoaded', renderMakerUI);
+
+    // ===== SAVE/LOAD MAKER STATE =====
+
+    function saveMakerState() {
+        try {
+            // Capture current state
+            const makerState = {
+                toolConfig: TOOL_CONFIG,
+                sectionContent: SECTION_CONTENT,
+                deploymentOverrides: builderDeploymentOverrides,
+                selectedModalities: Array.from(document.querySelectorAll('.deployment-modality-checkbox:checked')).map(cb => cb.dataset.key),
+                sctName: document.getElementById('sctName')?.value || '',
+                timestamp: new Date().toISOString()
+            };
+
+            // Capture all subsection content from the DOM
+            Object.keys(TOOL_CONFIG).forEach(sectionKey => {
+                const config = TOOL_CONFIG[sectionKey];
+                if (config.hasSubsections) {
+                    const container = document.getElementById(`subsections-${sectionKey}`);
+                    if (container) {
+                        const items = Array.from(container.querySelectorAll('.subsection-item'));
+                        config.subsections = items.map(item => {
+                            const editor = item.querySelector('.editor-content');
+                            const titleInput = item.querySelector('.standard-title-input');
+                            const itemKey = item.dataset.itemKey;
+                            const titleText = titleInput?.value || item.dataset.title || '';
+                            const content = editor?.innerHTML || '';
+
+                            return {
+                                content,
+                                itemKey,
+                                titleText
+                            };
+                        });
+                    }
+                } else if (config.editableContent) {
+                    const editor = document.querySelector(`#accordion-item-${sectionKey} .section-content-editor .editor-content`);
+                    if (editor) {
+                        SECTION_CONTENT[sectionKey] = editor.innerHTML;
+                    }
+                }
+            });
+
+            // Get the current page HTML
+            const currentHTML = document.documentElement.outerHTML;
+
+            // Create a parser to modify the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(currentHTML, 'text/html');
+
+            // Inject the state as a script in the saved HTML
+            const stateScript = doc.createElement('script');
+            stateScript.type = 'application/json';
+            stateScript.id = 'maker-saved-state';
+            stateScript.textContent = JSON.stringify(makerState, null, 2);
+            doc.head.appendChild(stateScript);
+
+            // Serialize back to HTML
+            const serializer = new XMLSerializer();
+            const savedHTML = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
+
+            // Download the file
+            const blob = new Blob([savedHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            a.download = `sct-maker-state-${timestamp}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast('Maker state saved successfully!', 'success');
+        } catch (error) {
+            console.error('Error saving maker state:', error);
+            alert('Error saving maker state: ' + error.message);
+        }
+    }
+
+    function loadMakerState(file) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            try {
+                const html = e.target.result;
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Extract the saved state
+                const stateScript = doc.getElementById('maker-saved-state');
+                if (!stateScript) {
+                    alert('This file does not contain saved maker state.');
+                    return;
+                }
+
+                const makerState = JSON.parse(stateScript.textContent);
+
+                // Restore TOOL_CONFIG
+                Object.keys(TOOL_CONFIG).forEach(key => delete TOOL_CONFIG[key]);
+                Object.assign(TOOL_CONFIG, makerState.toolConfig);
+
+                // Restore SECTION_CONTENT
+                Object.keys(SECTION_CONTENT).forEach(key => delete SECTION_CONTENT[key]);
+                Object.assign(SECTION_CONTENT, makerState.sectionContent);
+
+                // Restore deployment overrides
+                Object.keys(builderDeploymentOverrides).forEach(key => delete builderDeploymentOverrides[key]);
+                Object.assign(builderDeploymentOverrides, makerState.deploymentOverrides || {});
+
+                // Restore SCT name
+                const sctNameInput = document.getElementById('sctName');
+                if (sctNameInput && makerState.sctName) {
+                    sctNameInput.value = makerState.sctName;
+                }
+
+                // Restore selected modalities
+                document.querySelectorAll('.deployment-modality-checkbox').forEach(cb => {
+                    cb.checked = makerState.selectedModalities?.includes(cb.dataset.key) || false;
+                });
+
+                // Re-render the maker UI
+                renderMakerUI();
+                renderSectionManagementList();
+
+                showToast(`Maker state loaded successfully! (Saved: ${new Date(makerState.timestamp).toLocaleString()})`, 'success');
+            } catch (error) {
+                console.error('Error loading maker state:', error);
+                alert('Error loading maker state: ' + error.message);
+            }
+        };
+
+        reader.readAsText(file);
+    }
+
+    // ===== ENHANCED FEATURES =====
+
+    // Utility Functions
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    function throttle(func, limit) {
+        let inThrottle;
+        return function(...args) {
+            if (!inThrottle) {
+                func.apply(this, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    }
+
+    // Toast Notification System
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            info: 'fa-info-circle',
+            warning: 'fa-exclamation-triangle'
+        };
+
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        toast.innerHTML = `
+            <i class="fas ${icons[type]} toast-icon"></i>
+            <div class="toast-content">${message}</div>
+            <button class="toast-close" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+
+        container.appendChild(toast);
+
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', () => {
+            toast.remove();
+        });
+
+        if (duration > 0) {
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+    }
+
+    // Dark Mode Toggle
+    function initDarkMode() {
+        const darkModeBtn = document.getElementById('btn-dark-mode');
+        if (!darkModeBtn) return;
+
+        const savedTheme = localStorage.getItem('sct-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateDarkModeIcon(savedTheme);
+
+        darkModeBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('sct-theme', newTheme);
+            updateDarkModeIcon(newTheme);
+            showToast(`${newTheme === 'dark' ? 'Dark' : 'Light'} mode activated`, 'success', 2000);
+        });
+    }
+
+    function updateDarkModeIcon(theme) {
+        const darkModeBtn = document.getElementById('btn-dark-mode');
+        if (!darkModeBtn) return;
+        const icon = darkModeBtn.querySelector('i');
+        icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    }
+
+    // Auto-Save System
+    let autoSaveTimeout;
+    let lastSaveState = '';
+
+    function initAutoSave() {
+        // Load saved draft on startup
+        loadDraft();
+
+        // Set up auto-save on input changes
+        const container = document.querySelector('.maker-container');
+        if (!container) return;
+
+        container.addEventListener('input', debounce(() => {
+            saveDraft();
+        }, 2000));
+
+        container.addEventListener('change', debounce(() => {
+            saveDraft();
+        }, 2000));
+
+        // Manual save button
+        const saveDraftBtn = document.getElementById('btn-save-draft');
+        if (saveDraftBtn) {
+            saveDraftBtn.addEventListener('click', () => {
+                saveDraft(true);
+            });
+        }
+    }
+
+    function saveDraft(manual = false) {
+        const saveIndicator = document.getElementById('save-indicator');
+        const saveStatus = document.getElementById('save-status');
+
+        if (saveIndicator && saveStatus) {
+            saveIndicator.classList.remove('saved');
+            saveIndicator.classList.add('saving');
+            saveStatus.textContent = 'Saving...';
+        }
+
+        const config = collectBuilderConfig();
+        const configString = JSON.stringify(config);
+
+        if (configString === lastSaveState && !manual) {
+            return;
+        }
+
+        try {
+            localStorage.setItem('sct-builder-draft', configString);
+            localStorage.setItem('sct-builder-draft-timestamp', new Date().toISOString());
+            lastSaveState = configString;
+
+            setTimeout(() => {
+                if (saveIndicator && saveStatus) {
+                    saveIndicator.classList.remove('saving');
+                    saveIndicator.classList.add('saved');
+                    const timestamp = new Date().toLocaleTimeString();
+                    saveStatus.textContent = `Saved at ${timestamp}`;
+                }
+                if (manual) {
+                    showToast('Draft saved successfully', 'success', 2000);
+                }
+            }, 500);
+        } catch (error) {
+            console.error('Failed to save draft:', error);
+            if (saveIndicator && saveStatus) {
+                saveIndicator.classList.remove('saving');
+                saveStatus.textContent = 'Save failed';
+            }
+            showToast('Failed to save draft', 'error');
+        }
+    }
+
+    function loadDraft() {
+        try {
+            const draftString = localStorage.getItem('sct-builder-draft');
+            const timestamp = localStorage.getItem('sct-builder-draft-timestamp');
+
+            if (!draftString) return;
+
+            const draft = JSON.parse(draftString);
+            const saveIndicator = document.getElementById('save-indicator');
+            const saveStatus = document.getElementById('save-status');
+
+            // Restore SCT name
+            const sctNameInput = document.getElementById('sctName');
+            if (sctNameInput && draft.sctName) {
+                sctNameInput.value = draft.sctName;
+            }
+
+            // Restore deployment modalities
+            if (draft.deploymentModalities) {
+                draft.deploymentModalities.forEach(modality => {
+                    const checkbox = document.querySelector(`input[value="${modality}"]`);
+                    if (checkbox && !checkbox.checked) {
+                        checkbox.click();
+                    }
+                });
+            }
+
+            // Restore weights
+            if (draft.weights) {
+                Object.entries(draft.weights).forEach(([section, weight]) => {
+                    const input = document.querySelector(`input[data-section="${section}"]`);
+                    if (input) {
+                        input.value = weight;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+            }
+
+            lastSaveState = draftString;
+
+            if (saveIndicator && saveStatus && timestamp) {
+                saveIndicator.classList.add('saved');
+                const date = new Date(timestamp);
+                saveStatus.textContent = `Loaded draft from ${date.toLocaleString()}`;
+                showToast('Previous draft loaded', 'info', 2000);
+            }
+        } catch (error) {
+            console.error('Failed to load draft:', error);
+        }
+    }
+
+    function collectBuilderConfig() {
+        const config = {
+            sctName: document.getElementById('sctName')?.value || '',
+            deploymentModalities: Array.from(document.querySelectorAll('#deployment-modalities-options input:checked')).map(cb => cb.value),
+            weights: {}
+        };
+
+        document.querySelectorAll('.weight-input').forEach(input => {
+            const section = input.dataset.section;
+            if (section) {
+                config.weights[section] = parseFloat(input.value) || 0;
+            }
+        });
+
+        return config;
+    }
+
+    // Progress Bar Calculator
+    function updateProgressBar() {
+        const progressBar = document.getElementById('completion-progress');
+        const progressFill = document.getElementById('progress-bar-fill');
+        const progressText = document.getElementById('progress-text');
+
+        if (!progressBar || !progressFill || !progressText) return;
+
+        const totalFields = document.querySelectorAll('input[type="text"], input[type="number"], textarea, select').length;
+        const filledFields = Array.from(document.querySelectorAll('input[type="text"], input[type="number"], textarea, select'))
+            .filter(field => field.value && field.value.trim() !== '').length;
+
+        const percentage = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+
+        progressFill.style.width = `${percentage}%`;
+        progressText.textContent = `${percentage}% Complete`;
+
+        if (percentage > 0) {
+            progressBar.style.display = 'block';
+        }
+    }
+
+    // Search and Filter
+    function initSearch() {
+        const searchInput = document.getElementById('search-standards');
+        const clearSearchBtn = document.getElementById('btn-clear-search');
+        const searchResults = document.getElementById('search-results');
+
+        if (!searchInput || !searchResults) return;
+
+        searchInput.addEventListener('input', debounce((e) => {
+            const query = e.target.value.trim();
+            if (query.length < 2) {
+                searchResults.innerHTML = '';
+                return;
+            }
+            performSearch(query);
+        }, 300));
+
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                searchResults.innerHTML = '';
+                searchInput.focus();
+            });
+        }
+    }
+
+    function performSearch(query) {
+        const searchResults = document.getElementById('search-results');
+        if (!searchResults) return;
+
+        const results = [];
+        const queryLower = query.toLowerCase();
+
+        // Search through all accordion items
+        document.querySelectorAll('.accordion-item').forEach(item => {
+            const sectionTitle = item.querySelector('.accordion-button')?.textContent || '';
+            const sectionContent = item.querySelector('.accordion-body')?.textContent || '';
+
+            if (sectionTitle.toLowerCase().includes(queryLower) || sectionContent.toLowerCase().includes(queryLower)) {
+                const context = getSearchContext(sectionContent, queryLower);
+                results.push({
+                    title: sectionTitle.trim(),
+                    context: context,
+                    element: item
+                });
+            }
+        });
+
+        displaySearchResults(results, query);
+    }
+
+    function getSearchContext(text, query) {
+        const index = text.toLowerCase().indexOf(query);
+        if (index === -1) return text.substring(0, 100) + '...';
+
+        const start = Math.max(0, index - 50);
+        const end = Math.min(text.length, index + query.length + 50);
+        let context = text.substring(start, end);
+
+        if (start > 0) context = '...' + context;
+        if (end < text.length) context = context + '...';
+
+        return context;
+    }
+
+    function displaySearchResults(results, query) {
+        const searchResults = document.getElementById('search-results');
+        if (!searchResults) return;
+
+        if (results.length === 0) {
+            searchResults.innerHTML = '<p class="text-muted">No results found</p>';
+            return;
+        }
+
+        searchResults.innerHTML = results.map(result => {
+            const highlightedContext = highlightText(result.context, query);
+            return `
+                <div class="search-result-item" data-section="${result.title}">
+                    <div class="result-title">${result.title}</div>
+                    <div class="result-context">${highlightedContext}</div>
+                </div>
+            `;
+        }).join('');
+
+        // Add click handlers to scroll to sections
+        searchResults.querySelectorAll('.search-result-item').forEach((item, index) => {
+            item.addEventListener('click', () => {
+                results[index].element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const button = results[index].element.querySelector('.accordion-button');
+                if (button && button.classList.contains('collapsed')) {
+                    button.click();
+                }
+            });
+        });
+    }
+
+    function highlightText(text, query) {
+        const regex = new RegExp(`(${query})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    // Template Management
+    function initTemplateManagement() {
+        const saveTemplateBtn = document.getElementById('btn-save-template');
+        const templateNameInput = document.getElementById('template-name-input');
+
+        if (saveTemplateBtn) {
+            saveTemplateBtn.addEventListener('click', () => {
+                const name = templateNameInput?.value.trim();
+                if (!name) {
+                    showToast('Please enter a template name', 'warning');
+                    return;
+                }
+                saveTemplate(name);
+                if (templateNameInput) templateNameInput.value = '';
+            });
+        }
+
+        loadTemplatesList();
+    }
+
+    function saveTemplate(name) {
+        try {
+            const config = collectBuilderConfig();
+            const templates = JSON.parse(localStorage.getItem('sct-templates') || '[]');
+
+            templates.push({
+                name: name,
+                date: new Date().toISOString(),
+                config: config
+            });
+
+            localStorage.setItem('sct-templates', JSON.stringify(templates));
+            loadTemplatesList();
+            showToast('Template saved successfully', 'success');
+        } catch (error) {
+            console.error('Failed to save template:', error);
+            showToast('Failed to save template', 'error');
+        }
+    }
+
+    function loadTemplatesList() {
+        const templatesList = document.getElementById('templates-list');
+        if (!templatesList) return;
+
+        try {
+            const templates = JSON.parse(localStorage.getItem('sct-templates') || '[]');
+
+            if (templates.length === 0) {
+                templatesList.innerHTML = '<p class="text-muted text-center">No templates saved yet.</p>';
+                return;
+            }
+
+            templatesList.innerHTML = templates.map((template, index) => {
+                const date = new Date(template.date).toLocaleString();
+                return `
+                    <div class="template-item">
+                        <div class="template-info">
+                            <div class="template-name">${template.name}</div>
+                            <div class="template-date">${date}</div>
+                        </div>
+                        <div class="template-actions">
+                            <button class="btn btn-sm btn-primary" onclick="loadTemplate(${index})">
+                                <i class="fas fa-download"></i> Load
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTemplate(${index})">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error('Failed to load templates list:', error);
+        }
+    }
+
+    function loadTemplate(index) {
+        try {
+            const templates = JSON.parse(localStorage.getItem('sct-templates') || '[]');
+            const template = templates[index];
+
+            if (!template) return;
+
+            // Load the template configuration
+            const config = template.config;
+
+            // Restore SCT name
+            const sctNameInput = document.getElementById('sctName');
+            if (sctNameInput) {
+                sctNameInput.value = config.sctName || '';
+            }
+
+            // Restore deployment modalities
+            document.querySelectorAll('#deployment-modalities-options input').forEach(cb => {
+                cb.checked = false;
+            });
+            if (config.deploymentModalities) {
+                config.deploymentModalities.forEach(modality => {
+                    const checkbox = document.querySelector(`input[value="${modality}"]`);
+                    if (checkbox) {
+                        checkbox.click();
+                    }
+                });
+            }
+
+            // Restore weights
+            if (config.weights) {
+                Object.entries(config.weights).forEach(([section, weight]) => {
+                    const input = document.querySelector(`input[data-section="${section}"]`);
+                    if (input) {
+                        input.value = weight;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+            }
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('templatesModal'));
+            if (modal) modal.hide();
+
+            showToast(`Template "${template.name}" loaded successfully`, 'success');
+        } catch (error) {
+            console.error('Failed to load template:', error);
+            showToast('Failed to load template', 'error');
+        }
+    }
+
+    function deleteTemplate(index) {
+        if (!confirm('Are you sure you want to delete this template?')) return;
+
+        try {
+            const templates = JSON.parse(localStorage.getItem('sct-templates') || '[]');
+            templates.splice(index, 1);
+            localStorage.setItem('sct-templates', JSON.stringify(templates));
+            loadTemplatesList();
+            showToast('Template deleted successfully', 'success');
+        } catch (error) {
+            console.error('Failed to delete template:', error);
+            showToast('Failed to delete template', 'error');
+        }
+    }
+
+    // Make functions globally accessible
+    window.loadTemplate = loadTemplate;
+    window.deleteTemplate = deleteTemplate;
+
+    // PDF Export for Builder Configuration
+    function initPDFExport() {
+        const exportBtn = document.getElementById('btn-export-config');
+        if (!exportBtn) return;
+
+        exportBtn.addEventListener('click', () => {
+            showExportPreview();
+        });
+
+        const confirmExportBtn = document.getElementById('btn-confirm-export');
+        if (confirmExportBtn) {
+            confirmExportBtn.addEventListener('click', () => {
+                exportBuilderConfigToPDF();
+            });
+        }
+    }
+
+    function showExportPreview() {
+        const previewContent = document.getElementById('export-preview-content');
+        if (!previewContent) return;
+
+        const config = collectBuilderConfig();
+
+        previewContent.innerHTML = `
+            <div class="mb-3">
+                <strong>SCT Name:</strong> ${config.sctName || 'Not specified'}
+            </div>
+            <div class="mb-3">
+                <strong>Deployment Modalities:</strong> ${config.deploymentModalities.join(', ') || 'None selected'}
+            </div>
+            <div class="mb-3">
+                <strong>Section Weights:</strong>
+                <ul>
+                    ${Object.entries(config.weights).map(([section, weight]) =>
+                        `<li>${section}: ${weight}%</li>`
+                    ).join('')}
+                </ul>
+            </div>
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById('exportPreviewModal'));
+        modal.show();
+    }
+
+    function exportBuilderConfigToPDF() {
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const config = collectBuilderConfig();
+
+            // Title
+            doc.setFontSize(20);
+            doc.text('SCT Tool Builder Configuration', 20, 20);
+
+            // Metadata
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 30);
+
+            // SCT Name
+            doc.setFontSize(14);
+            doc.text('SCT Name:', 20, 45);
+            doc.setFontSize(12);
+            doc.text(config.sctName || 'Not specified', 20, 52);
+
+            // Deployment Modalities
+            doc.setFontSize(14);
+            doc.text('Deployment Modalities:', 20, 65);
+            doc.setFontSize(12);
+            const modalities = config.deploymentModalities.join(', ') || 'None selected';
+            doc.text(modalities, 20, 72);
+
+            // Section Weights
+            doc.setFontSize(14);
+            doc.text('Section Weights:', 20, 85);
+            doc.setFontSize(12);
+            let yPos = 92;
+            Object.entries(config.weights).forEach(([section, weight]) => {
+                doc.text(`${section}: ${weight}%`, 25, yPos);
+                yPos += 7;
+            });
+
+            doc.save('sct-builder-configuration.pdf');
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('exportPreviewModal'));
+            if (modal) modal.hide();
+
+            showToast('Configuration exported to PDF', 'success');
+        } catch (error) {
+            console.error('Failed to export PDF:', error);
+            showToast('Failed to export PDF', 'error');
+        }
+    }
+
+    // Keyboard Shortcuts
+    function initKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+S - Save Draft
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveDraft(true);
+            }
+
+            // Ctrl+D - Toggle Dark Mode
+            if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                document.getElementById('btn-dark-mode')?.click();
+            }
+
+            // Ctrl+F - Focus Search
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('search-standards')?.focus();
+            }
+
+            // Ctrl+E - Export Config
+            if (e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                document.getElementById('btn-export-config')?.click();
+            }
+
+            // Ctrl+T - Open Templates
+            if (e.ctrlKey && e.key === 't') {
+                e.preventDefault();
+                document.getElementById('btn-templates')?.click();
+            }
+
+            // Ctrl+K - Show Shortcuts
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('btn-shortcuts')?.click();
+            }
+        });
+    }
+
+    // Initialize All Enhanced Features
+    function initEnhancedFeatures() {
+        initDarkMode();
+        initAutoSave();
+        initSearch();
+        initTemplateManagement();
+        initPDFExport();
+        initKeyboardShortcuts();
+
+        // Update progress bar on any input
+        document.addEventListener('input', throttle(() => {
+            updateProgressBar();
+        }, 1000));
+
+        // Show welcome message
+        setTimeout(() => {
+            showToast('Welcome! Your progress is auto-saved.', 'info', 4000);
+        }, 500);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        renderMakerUI();
+        renderSectionManagementList();
+        initEnhancedFeatures();
+
+        // Save/Load maker state event listeners
+        const btnSaveMaker = document.getElementById('btn-save-maker');
+        if (btnSaveMaker) {
+            btnSaveMaker.addEventListener('click', saveMakerState);
+        }
+
+        const btnLoadMaker = document.getElementById('btn-load-maker');
+        const makerFileInput = document.getElementById('maker-file-input');
+        if (btnLoadMaker && makerFileInput) {
+            btnLoadMaker.addEventListener('click', () => {
+                makerFileInput.click();
+            });
+
+            makerFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    loadMakerState(file);
+                }
+                // Reset input so the same file can be loaded again
+                e.target.value = '';
+            });
+        }
+
+        // Check if there's a saved state in the current page on load
+        const savedStateScript = document.getElementById('maker-saved-state');
+        if (savedStateScript) {
+            try {
+                const makerState = JSON.parse(savedStateScript.textContent);
+
+                // Ask user if they want to restore
+                if (confirm(`Found saved maker state from ${new Date(makerState.timestamp).toLocaleString()}. Do you want to restore it?`)) {
+                    // Restore TOOL_CONFIG
+                    Object.keys(TOOL_CONFIG).forEach(key => delete TOOL_CONFIG[key]);
+                    Object.assign(TOOL_CONFIG, makerState.toolConfig);
+
+                    // Restore SECTION_CONTENT
+                    Object.keys(SECTION_CONTENT).forEach(key => delete SECTION_CONTENT[key]);
+                    Object.assign(SECTION_CONTENT, makerState.sectionContent);
+
+                    // Restore deployment overrides
+                    Object.keys(builderDeploymentOverrides).forEach(key => delete builderDeploymentOverrides[key]);
+                    Object.assign(builderDeploymentOverrides, makerState.deploymentOverrides || {});
+
+                    // Restore SCT name
+                    const sctNameInput = document.getElementById('sctName');
+                    if (sctNameInput && makerState.sctName) {
+                        sctNameInput.value = makerState.sctName;
+                    }
+
+                    // Restore selected modalities
+                    document.querySelectorAll('.deployment-modality-checkbox').forEach(cb => {
+                        cb.checked = makerState.selectedModalities?.includes(cb.dataset.key) || false;
+                    });
+
+                    // Re-render the maker UI
+                    renderMakerUI();
+                    renderSectionManagementList();
+
+                    showToast('Maker state restored successfully!', 'success');
+                }
+            } catch (error) {
+                console.error('Error restoring saved state:', error);
+            }
+        }
+    });
     </script>
     
     <div id="template-info" style="display: none;"><h2 class="mb-4">Self-Assessment Checklist for Emergency Medical Teams</h2><div class="card section-card"><div class="card-body"><h5 class="card-title">Minimum Standards for Highly Infectious Disease (HID) Specialized Care Team (SCT) – AWD Inpatient</h5><p class="card-text">This self-assessment tool is designed to help HID SCTs evaluate their readiness and capabilities according to the established minimum standards.</p><p class="card-text">Use this digital tool to complete your assessment, track progress, and generate reports for your organization and the coordination mechanism.</p><p class="text-muted">Version 1.0/2025</p></div></div><div class="row mt-4"><div class="col-md-4"><div class="overview-card bg-light"><i class="fas fa-check-circle fa-2x text-success"></i><h5>Completed Sections</h5><div class="card-value" id="completedSections">0/8</div></div></div><div class="col-md-4"><div class="overview-card bg-light"><i class="fas fa-chart-line fa-2x text-primary"></i><h5>Overall Score</h5><div class="card-value" id="overallScore">0%</div></div></div><div class="col-md-4"><div class="overview-card bg-light"><i class="fas fa-clock fa-2x text-warning"></i><h5>Last Updated</h5><div class="card-value" id="lastUpdated">Today</div></div></div></div></div>
     <div id="template-definition" style="display: none;"><h2 class="mb-4">Technical Standards Definition</h2><div class="card section-card"><div class="card-body"><p>HID SCTs are national or international teams deployed at the request of the Ministry of Health (MOH)/ coordination cell of the host country. The HID SCT's modality of deployment (embed, coupled or self-sustained) depends on context and defined capacity/level of care.</p><p>Depending on modality of deployment, some operations support, logistics and WASH elements may be provided by a host facility.</p></div></div></div>
     <div id="template-org-detail" style="display: none;"><h2 class="mb-4">Organizational Details</h2><div class="card section-card"><div class="section-header"><h5>Team Information</h5></div><div class="card-body"><div class="row mb-3"><div class="col-md-6"><label for="teamName" class="form-label">Team Name</label><input type="text" class="form-control" id="teamName"></div><div class="col-md-6"><label for="region" class="form-label">Region</label><input type="text" class="form-control" id="region"></div></div><div class="row mb-3"><div class="col-md-6"><label for="country" class="form-label">Country</label><input type="text" class="form-control" id="country"></div><div class="col-md-6"><label for="mentorName" class="form-label">Mentor Name</label><input type="text" class="form-control" id="mentorName"></div></div></div></div><div class="card section-card"><div class="section-header"><h5>Contact Information</h5></div><div class="card-body"><div class="row mb-3"><div class="col-md-6"><h6>Headquarters Contact</h6><div class="mb-2"><label class="form-label">Name</label><input type="text" class="form-control" id="hqName"></div><div class="mb-2"><label class="form-label">Email</label><input type="email" class="form-control" id="hqEmail"></div><div class="mb-2"><label class="form-label">Phone</label><input type="tel" class="form-control" id="hqPhone"></div><div class="mb-2"><label class="form-label">Position</label><input type="text" class="form-control" id="hqPosition"></div></div><div class="col-md-6"><h6>Operations Contact</h6><div class="mb-2"><label class="form-label">Name</label><input type="text" class="form-control" id="opsName"></div><div class="mb-2"><label class="form-label">Email</label><input type="email" class="form-control" id="opsEmail"></div><div class="mb-2"><label class="form-label">Phone</label><input type="tel" class="form-control" id="opsPhone"></div><div class="mb-2"><label class="form-label">Position</label><input type="text" class="form-control" id="opsPosition"></div></div></div></div></div><div class="card section-card"><div class="section-header"><h5>Progress Overview</h5></div><div class="card-body"><table class="table table-bordered"><thead class="table-light"><tr><th>Section</th><th>Weight</th><th>Status</th><th>% Completed</th></tr></thead><tbody id="progressTableBody"></tbody></table></div></div></div>
     <div id="template-summary" style="display: none;"><h2 class="mb-4">Summary & Action Plan</h2><div class="card section-card"><div class="section-header"><h5>Overall Readiness Assessment</h5></div><div class="card-body"><div class="mb-3"><label for="strengths" class="form-label"><strong>Strengths Identified:</strong></label><textarea class="form-control summary-textarea" id="strengths" placeholder="List the top 3-5 strengths identified..."></textarea></div><div class="mb-3"><label for="criticalGaps" class="form-label"><strong>Critical Gaps Requiring Immediate Action:</strong></label><textarea class="form-control summary-textarea" id="criticalGaps" placeholder="List the critical gaps that need..."></textarea></div><div class="mb-3"><label class="form-label"><strong>Timeline for Addressing Gaps:</strong></label><div class="mb-2"><label class="form-label">Immediate (0-1 month):</label><textarea class="form-control summary-textarea" id="immediateActions"></textarea></div><div class="mb-2"><label class="form-label">Short-term (1-3 months):</label><textarea class="form-control summary-textarea" id="shortTermActions"></textarea></div><div class="mb-2"><label class="form-label">Medium-term (3-6 months):</label><textarea class="form-control summary-textarea" id="mediumTermActions"></textarea></div></div><div class="mb-3"><label class="form-label"><strong>Support Required:</strong></label><div class="mb-2"><label class="form-label">Technical assistance needed:</label><textarea class="form-control summary-textarea" id="technicalAssistance"></textarea></div><div class="mb-2"><label class="form-label">Training requirements:</label><textarea class="form-control summary-textarea" id="trainingRequirements"></textarea></div><div class="mb-2"><label class="form-label">Resource requirements:</label><textarea class="form-control summary-textarea" id="resourceRequirements"></textarea></div></div><div class="mb-3"><label for="nextSteps" class="form-label"><strong>Next Steps:</strong></label><textarea class="form-control summary-textarea" id="nextSteps" placeholder="1. First priority action..."></textarea></div><div class="row"><div class="col-md-6"><label for="completionDate" class="form-label">Date of Completion:</label><input type="date" class="form-control" id="completionDate"></div><div class="col-md-6"><label for="reviewedBy" class="form-label">Reviewed by:</label><input type="text" class="form-control" id="reviewedBy" placeholder="Name and title"></div></div><div class="mt-3"><label for="mentorAssignment" class="form-label">Mentor Assignment:</label><input type="text" class="form-control" id="mentorAssignment" placeholder="Mentor name and contact"></div></div></div></div>
+
+    <!-- Templates Modal -->
+    <div class="modal fade" id="templatesModal" tabindex="-1" aria-labelledby="templatesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="templatesModalLabel">Template Management</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="template-name-input" class="form-label">Save Current Configuration as Template</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="template-name-input" placeholder="Enter template name...">
+                            <button class="btn btn-primary" id="btn-save-template">
+                                <i class="fas fa-save me-1"></i>Save Template
+                            </button>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Saved Templates</h6>
+                    <div id="templates-list" class="mt-3">
+                        <p class="text-muted text-center">No templates saved yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal fade" id="shortcutsModal" tabindex="-1" aria-labelledby="shortcutsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="shortcutsModalLabel">Keyboard Shortcuts</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="keyboard-shortcuts-list">
+                        <div class="shortcut-item">
+                            <span>Search Standards</span>
+                            <span class="shortcut-key">Ctrl+F</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Save Draft</span>
+                            <span class="shortcut-key">Ctrl+S</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Toggle Dark Mode</span>
+                            <span class="shortcut-key">Ctrl+D</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Export Configuration</span>
+                            <span class="shortcut-key">Ctrl+E</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Open Templates</span>
+                            <span class="shortcut-key">Ctrl+T</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Show Shortcuts</span>
+                            <span class="shortcut-key">Ctrl+K</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Preview Modal -->
+    <div class="modal fade" id="exportPreviewModal" tabindex="-1" aria-labelledby="exportPreviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exportPreviewModalLabel">Export Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Configuration Summary</h6>
+                    <div id="export-preview-content">
+                        <!-- Preview content will be dynamically inserted here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirm-export">
+                        <i class="fas fa-file-pdf me-1"></i>Export PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
